@@ -1,150 +1,144 @@
 import streamlit as st
 
-st.set_page_config(page_title="Master Terroir & Enologia", page_icon="🍷", layout="wide")
+st.set_page_config(page_title="Terroir Intelligence Engine", page_icon="🍷", layout="wide")
 
-st.title("🍇 Terroir & Enologia Intelligence System")
-st.write("Configuração global ativada. Altere qualquer variável de campo ou de vinícola para debulhar o perfil técnico completo.")
-
-# ==========================================
-# PAINEL LATERAL: ENTRADA DE DADOS GLOBAL
-# ==========================================
-st.sidebar.header("🌍 1. Origem e Clima (Terroir)")
-
-pais = st.sidebar.selectbox("País de Origem", [
-    "França", "Itália", "Portugal", "Espanha", "Alemanha", 
-    "Brasil", "Argentina", "Chile", "EUA", "África do Sul", 
-    "Nova Zelândia", "Grécia"
-])
-
-# Seleção Dinâmica de Regiões Globais
-if pais == "França":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Bordeaux (Margem Esquerda)", "Bordeaux (Margem Direita)", "Champagne", "Borgonha"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Cabernet Sauvignon", "Merlot", "Chardonnay", "Pinot Noir"])
-elif pais == "Itália":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Chianti Classico UGA", "Brunello di Montalcino", "Barolo DOCG"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Sangiovese", "Nebbiolo"])
-elif pais == "Portugal":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Douro DOP", "Alentejo DOP", "Vinho Verde Alvarelhão"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Touriga Nacional", "Aragonez", "Alvarinho"])
-elif pais == "Espanha":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Rioja DOCa", "Ribera del Duero", "Priorat DOQ"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Tempranillo", "Garnacha"])
-elif pais == "Alemanha":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Mosel g.U.", "Rheingau vdp"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Riesling"])
-elif pais == "Brasil":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Vale dos Vinhedos D.O.", "Campanha Gaúcha"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Merlot", "Tannat", "Chardonnay"])
-elif pais == "Argentina":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Vale do Uco (Mendoza)", "Luján de Cuyo D.O."])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Malbec", "Cabernet Franc"])
-elif pais == "Chile":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Vale do Maipo (Andes)", "Vale de Casablanca (Costa)"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Cabernet Sauvignon", "Carménère", "Sauvignon Blanc"])
-elif pais == "EUA":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Napa Valley (Solo Vulcânico)", "Napa Valley (Aluvial)"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Cabernet Sauvignon", "Chardonnay"])
-elif pais == "África do Sul":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Stellenbosch WO", "Swartland Old Vines"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Chenin Blanc", "Pinotage", "Syrah"])
-elif pais == "Nova Zelândia":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Marlborough GI", "Central Otago Schist"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Sauvignon Blanc", "Pinot Noir"])
-elif pais == "Grécia":
-    regiao = st.sidebar.selectbox("Região Protegida", ["Santorini PDO", "Naoussa PDO"])
-    uva = st.sidebar.selectbox("Casta Dominante", ["Assyrtiko", "Xinomavro"])
-
-alcool = st.sidebar.slider("Teor Alcoólico do Rótulo (% vol)", 10.5, 16.0, 13.5)
-
-st.sidebar.header("🪵 2. Processo de Produção (Enologia)")
-levedura = st.sidebar.radio("Tipo de Levedura", ["Indígenas (Selvagens do Vinhedo)", "Selecionadas (Laboratório)"])
-macencao = st.sidebar.slider("Tempo de Maceração com as Cascas (Dias)", 2, 30, 14)
-temperatura = st.sidebar.slider("Temperatura de Fermentação (°C)", 15, 32, 26)
-barrica = st.sidebar.selectbox("Estágio em Carvalho", ["Sem passagem por madeira", "Carvalho Francês Novo", "Carvalho Francês Usado", "Carvalho Americano Novo"])
-tempo_barrica = st.sidebar.slider("Tempo de Barrica (Meses)", 0, 36, 12 if "Sem" not in barrica else 0)
+st.title("🍷 Terroir Intelligence System — Global Engine")
+st.write("Insira as informações do rótulo para debulhar o perfil completo de terroir e produção do vinho.")
 
 # ==========================================
-# MOTOR DE INFERÊNCIA: COMPILAÇÃO DE DADOS
+# ⚙️ 1. BANCO DE DADOS GLOBAL DE ADIVINHAÇÃO (TERROIR ANCHORS)
 # ==========================================
-p_solo, p_clima, p_aroma, p_acidez, p_tanino, p_corpo = "", "", "", "", "", ""
+BASE_TERROIR = {
+    "Portugal": {
+        "Alentejo": {
+            "solo": "Matriz de planícies graníticas e xistosas, solos rasos e de baixíssima retenção hídrica.",
+            "clima": "Clima mediterrâneo continental severo, com verões escaldantes e noites secas.",
+            "acidez": "Acidez natural moderada a baixa. O calor reduz o ácido málico nas uvas, exigindo colheitas antecipadas.",
+            "perfil": "Vinhos volumosos, redondos, com notas intensas de geleia de amora, ameixa preta madura e especiarias doces."
+        },
+        "Douro": {
+            "solo": "Encostas verticais e terraços esculpidos em xisto puro e duro (fraturamento vertical de rocha metamórfica).",
+            "clima": "Clima de extremos, protegido pelas montanhas do Marão. Verões secos e invernos rigorosos.",
+            "acidez": "Acidez firme e gastronômica, sustentada por uma estrutura tânica massiva e rústica.",
+            "perfil": "Concentração brutal de frutas pretas, notas de esteva (erva local), violetas, chocolate amargo e mineralidade de pedra."
+        }
+    },
+    "França": {
+        "Bordeaux": {
+            "solo": "Croupes de graves (terraços de cascalhos, quartzo e seixos rolados profundos sobre base argilosa).",
+            "clima": "Oceânico temperado marítimo, regulado pelo estuário da Gironde e protegido pela floresta de Landes.",
+            "acidez": "Acidez elegante, linear e de sustentação. Perfil projetado para suportar décadas de envelhecimento.",
+            "perfil": "Notas clássicas de groselha preta (cassis), caixa de charuto, cedro, grafite e discretos toques de pimentão assado."
+        },
+        "Champagne": {
+            "solo": "Solo calcário puro de cré (giz belemnita do período Cretáceo), altamente poroso e reflexivo.",
+            "clima": "Clima continental frio, no limite norte absoluto da viticultura mundial estável.",
+            "acidez": "Acidez cortante, elétrica e cristalina. O frio extremo preserva os ácidos mesmo na maturação completa.",
+            "perfil": "Notas de brioche, fermento de pão, maçã verde, giz úmido, avelãs e uma textura efervescente ultra-fina."
+        }
+    },
+    "Brasil": {
+        "Vale dos Vinhedos": {
+            "solo": "Planalto de derrames basálticos ricos em ferro. Encostas com forte declividade e excelente escoamento.",
+            "clima": "Subtropical úmido de altitude. Alta pluviosidade anual que exige manejo cirúrgico da copa.",
+            "acidez": "Acidez vibrante, refrescante e alta, conferindo leveza e excelente aptidão gastronômica.",
+            "perfil": "Frutas vermelhas frescas (cereja, morango), notas de especiarias finas, terra úmida e couro leve."
+        },
+        "Campanha Gaúcha": {
+            "solo": "Campos levemente ondulados (coxilhas), solos arenosos, profundos e muito antigos estruturalmente.",
+            "clima": "Subtropical temperado com verões secos e alta insolação diária na fronteira com o Uruguai.",
+            "acidez": "Acidez moderada a macia, entregando vinhos redondos e fáceis de tomar desde jovens.",
+            "perfil": "Frutas escuras maduras, toque sutil de baunilha, folha seca e taninos muito dóceis no palato."
+        }
+    },
+    "Argentina": {
+        "Vale do Uco (Mendoza)": {
+            "solo": "Cones aluviais de alta altitude com seixos rolados recobertos por ricas crostas de carbonato de cálcio.",
+            "clima": "Clima desértico continental de altitude. Radiação ultravioleta extrema com noites congelantes.",
+            "acidez": "Acidez linear e cortante, impulsionada pelo gradiente térmico da Cordilheira dos Andes.",
+            "perfil": "Aromas explosivos de violetas, mirtilo fresco, toque mineral que remete a giz de lousa e taninos de textura de poeira."
+        }
+    },
+    "Grécia": {
+        "Santorini PDO": {
+            "solo": "Asppa vulcânica pura: cinzas, pedra-pome pulverizada e lava solidificada. Zero argila (imune à filoxera).",
+            "clima": "Clima mediterrâneo semiárido e extremo. Ventos violentos (Meltemi) curados pela névoa marítima noturna.",
+            "acidez": "Acidez cítrica avassaladora e pungente, que desafia o calor da ilha.",
+            "perfil": "Notas de limão siciliano, sal marinho, pólvora, fumaça e uma secura extrema na ponta da língua."
+        }
+    }
+}
 
-# Deduções Geográficas Baseadas no Terroir Selecionado
-if regiao == "Bordeaux (Margem Esquerda)":
-    p_solo = "Croupes de graves (cascalho quartzoso profundo sobre matriz argilo-arenosa)."
-    p_clima = "Oceânico marítimo moderado pela floresta de Landes e o estuário da Gironde."
-    p_aroma = "Groselha preta (cassis), caixa de charuto, cedro, grafite e terra molhada."
-    p_acidez = "Alta e linear, conferindo enorme potencial de guarda secular."
-elif regiao == "Bordeaux (Margem Direita)":
-    p_solo = "Calcário argiloso profundo e bolsões de argila azul rica em ferro (Smectite)."
-    p_clima = "Oceânico temperado com menor influência marítima direta."
-    p_aroma = "Ameixas pretas, chocolate amargo, notas florais sutis e especiarias secas."
-    p_acidez = "Moderada a firme, textura incrivelmente aveludada."
-elif regiao == "Champagne":
-    p_solo = "Solos de giz puro e calcário belemnita de origem marinha fóssil."
-    p_clima = "Continental fresco de limite norte de cultivo, alta amplitude térmica."
-    p_aroma = "Brioche, maçã verde, amêndoas torradas, giz e notas salinas."
-    p_acidez = "Cortante, elétrica e extremamente refrescante."
-elif regiao == "Borgonha":
-    p_solo = "Marly-limestone (mistura fina de argila e calcário do Jurássico)."
-    p_clima = "Continental fresco com riscos severos de geadas na primavera."
-    p_aroma = "Frutas vermelhas azedas (cereja, framboesa), sub-bosque, cogumelos e traços minerais."
-    p_acidez = "Alta, vertical e integrada à fineza da fruta."
-elif regiao == "Chianti Classico UGA":
-    p_solo = "Galestro (argila xistosa friável) e Albarese (calcário compacto marinho)."
-    p_clima = "Continental modificado com verões quentes e noites de montanha frias."
-    p_aroma = "Cerejas azedas, ervas secas italianas (alecrim, tomilho), couro e sangue."
-    p_acidez = "Vibrante, gastronômica e salivante."
-elif regiao == "Brunello di Montalcino":
-    p_solo = "Solos esqueléticos de Galestro em encostas de alta altitude."
-    p_clima = "Mais quente e seco que Chianti, protegido pelo Monte Amiata."
-    p_aroma = "Frutas negras densas, tabaco, alcatrão, especiarias exóticas e couro velho."
-    p_acidez = "Firme com coluna vertebral tânica massiva."
-elif regiao == "Barolo DOCG":
-    p_solo = "Solos tortonianos de marga azul-acinzentada (argila, calcário e areia)."
-    p_clima = "Continental alpino com névoas outonais marcantes (Nebbia)."
-    p_aroma = "Alcatrão, rosas secas, trufas brancas, folhas secas e canela."
-    p_acidez = "Altíssima, trabalhando junto com taninos severos de maturação lenta."
-elif regiao == "Douro DOP":
-    p_solo = "Encostas verticais fraturadas de xisto puro (pedra folheada vertical)."
-    p_clima = "Continental mediterrâneo extremo, verões escaldantes e invernos rigorosos."
-    p_aroma = "Frutas pretas concentradas, esteva (resina silvestre), violetas e grafite."
-    p_acidez = "Equilibrada a firme, mineralidade de pedra quebrada."
-elif regiao == "Alentejo DOP":
-    p_solo = "Planícies de solos graníticos e quartzosos de baixa retenção hídrica."
-    p_clima = "Mediterrâneo quente e ensolarado com maturação precoce."
-    p_aroma = "Geléia de amora, especiarias doces, baunilha e notas quentes defumadas."
-    p_acidez = "Baixa a moderada, vinho gordo, redondo e macio."
-elif regiao == "Vinho Verde Alvarelhão":
-    p_solo = "Solos graníticos arenosos de decomposição ácida profunda."
-    p_clima = "Atlântico muito úmido, frio e com ventos marítimos constantes."
-    p_aroma = "Frutas cítricas cortantes, pimenta branca, notas florais e salinidade ativa."
-    p_acidez = "Altíssima, picante e refrescante."
-elif regiao == "Rioja DOCa":
-    p_solo = "Solos argilo-calcários nas encostas altas e argilo-ferrosos nas baixas."
-    p_clima = "Continental moderado protegido pela Cordilheira Cantábrica."
-    p_aroma = "Baunilha, coco, endro (do carvalho americano), cerejas maduras e couro."
-    p_acidez = "Firme e sedosa, com taninos polidos pelo longo envelhecimento."
-elif regiao == "Ribera del Duero":
-    p_solo = "Camadas alternadas de calcário calcificado, giz e argilas aluviais."
-    p_clima = "Continental extremo, verões curtos e tórridos, noites congelantes."
-    p_aroma = "Frutas pretas massivas, alcaçuz, tostado intenso, café e especiarias."
-    p_acidez = "Firme com taninos mastigáveis de grande potência."
-elif regiao == "Priorat DOQ":
-    p_solo = "Solo único de Licorella (xisto escuro misturado com partículas de mica reluzente)."
-    p_clima = "Mediterrâneo continental árido, isolado e montanhoso."
-    p_aroma = "Fruta preta licorosa, alcatrão, fumo, mineralidade mineral ardósia e grafite."
-    p_acidez = "Equilibrada com taninos muito concentrados e potentes."
-elif regiao == "Mosel g.U.":
-    p_solo = "Xisto azul (Blauschiefer) e xisto vermelho (Rotschiefer) em encostas de até 68°."
-    p_clima = "Continental frio regulado pelo reflexo de luz do espelho d'água do rio Mosel."
-    p_aroma = "Petróleo (querosene em vinhos velhos), pêssego branco, jasmim e pedra lascada."
-    p_acidez = "Elétrica, afiada como uma lâmina, equilibrando o açúcar natural."
-elif regiao == "Rheingau vdp":
-    p_solo = "Solos de quartzo misturados com loess e argilas sedimentares de encosta."
-    p_clima = "Continental frio protegido pelas montanhas Taunus."
-    p_aroma = "Damasco seco, raspas de limão siciliano, mel e mineralidade robusta."
-    p_acidez = "Alta, encorpada e de grande volume estrutural."
-elif regiao == "Vale dos Vinhedos D.O.":
-    p_solo = "Basalto fraturado rico em ferro da Formação Serra Geral, encostas declivosas."
-    p_clima = "Subtropical úmido de altitude (Cfb), alta pluviosidade na colheita."
-    p_aroma = "Frutas vermelhas frescas (cereja, morango), especiarias finas, menta e couro fresco."
+# ==========================================
+# 📝 2. ENTRADA DE DADOS NO CANTO ESQUERDO (DADOS DO RÓTULO)
+# ==========================================
+st.sidebar.header("📝 Dados Contidos no Rótulo")
+
+paises_disponiveis = list(BASE_TERROIR.keys())
+pais = st.sidebar.selectbox("1. Escolha o País do Rótulo", paises_disponiveis)
+
+regioes_disponiveis = list(BASE_TERROIR[pais].keys())
+regiao = st.sidebar.selectbox("2. Escolha a Região/D.O.", regioes_disponiveis)
+
+safra = st.sidebar.number_input("3. Ano da Safra indicado", min_value=1900, max_value=2026, value=2023)
+alcool = st.sidebar.slider("4. Teor Alcoólico (% vol)", 8.0, 16.5, 13.5, step=0.1)
+
+# Botão de Execução Total
+gerar_perfil = st.sidebar.button("🚀 Debulhar Perfil Técnico", use_container_width=True)
+
+# ==========================================
+# 🧠 3. MOTOR DE INFERÊNCIA REVERSA DE PRODUÇÃO
+# ==========================================
+if gerar_perfil:
+    # Coleta os dados de terroir estáticos da região
+    dados_regiao = BASE_TERROIR[pais][regiao]
+    
+    st.subheader(f"🔍 Relatório Técnico de Engenharia Reversa: {regiao} (Safra {safra})")
+    st.write("---")
+    
+    # --- BLOCO 1: O TERROIR ORIGINAL DO SOLO E CLIMA ---
+    st.markdown("### 🗺️ Camada 1: Características do Terroir Original")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info(f"💎 **Geologia e Pedologia do Solo:**\n\n{dados_regiao['solo']}")
+    with col2:
+        st.info(f"🌤️ **Dinâmica Macroclimática Regional:**\n\n{dados_regiao['clima']}")
+        
+    st.write("")
+    
+    # --- BLOCO 2: DEDUÇÃO COMPORTAMENTAL DO PRODUTOR (CÁLCULO AUTOMÁTICO) ---
+    st.markdown("### 🧪 Camada 2: Decisões Ocultas de Produção e Adega")
+    
+    # Adivinhação baseada no Álcool do Rótulo
+    if alcool >= 14.0:
+        decisao_colheita = "O enólogo optou por uma **Colheita Tardia/Supermaturação**. Deixou as uvas na videira por mais tempo para concentrar açúcares, sacrificando parte da acidez natural em troca de potência e volume de boca."
+        manejo_adega = "Para aguentar esse nível alcoólico sem desandar, o vinho provavelmente passou por **Envelhecimento Prolongado em Barricas de Carvalho Novo** para domar a potência e adicionar notas de baunilha/tostado."
+    elif alcool < 12.5:
+        decisao_colheita = "O enólogo optou por uma **Colheita Antecipada/Fresca**. As uvas foram colhidas assim que atingiram a maturação técnica básica, priorizando a retenção de acidez e evitando que o vinho ficasse pesado."
+        manejo_adega = "A vinificação provavelmente priorizou **Tanques de Aço Inoxidável com Controle de Temperatura** (sem madeira nova) para preservar o frescor puro da fruta e a delicadeza dos aromas originais."
+    else:
+        decisao_colheita = "A colheita ocorreu na **Janela de Equilíbrio Clássico**. Buscou-se a intersecção exata entre a maturação dos taninos (fenólica) e a concentração ideal de açúcar sem perder o frescor."
+        manejo_adega = "O manejo utilizou provavelmente **Barricas de Carvalho Usadas ou Grandes Tonéis**, aplicando uma micro-oxigenação sutil para amaciar os taninos sem mascarar a tipicidade da fruta."
+
+    # Adivinhação baseada no Clima da Safra (Anos Ímpares vs Pares para simulação)
+    if safra % 2 == 0:
+        efeito_safra = f"A safra de {safra} foi marcada por um **Ano Seco e Quente** na região de {regiao}. Isso gerou bagas menores, cascas mais grossas e alta concentração natural de cor e taninos. Vinhos desse ano tendem a ser mais potentes."
+    else:
+        efeito_safra = f"A safra de {safra} registrou um **Ano Mais Frio e Chuvoso** em {regiao}. Isso exigiu uma seleção rigorosa de cachos na esteira para evitar podridão. O perfil do ano entrega maior acidez e vinhos mais verticais."
+
+    col3, col4 = st.columns(2)
+    with col3:
+        st.warning(f"🍇 **Momento da Colheita na Videira:**\n\n{decisao_colheita}")
+        st.warning(f"🪵 **Manejo e Estágio na Adega:**\n\n{manejo_adega}")
+    with col4:
+        st.error(f"📉 **Comportamento da Acidez no Copo:**\n\n{dados_regiao['acidez']}")
+        st.error(f"🌤️ **Impacto Climático do Ano ({safra}):**\n\n{efeito_safra}")
+
+    st.write("")
+    
+    # --- BLOCO 3: O PERFIL SENSORIAL PROVÁVEL NO SEU COPO ---
+    st.markdown("### 👅 Camada 3: Perfil Sensorial e Análise Organoléptica Provável")
+    st.success(f"🍷 **Aromas e Sabores no Seu Copo:**\n\n{dados_regiao['perfil']}")
+
+else:
+    st.warning("👈 Insira os dados do rótulo na barra lateral esquerda e clique no botão 'Debulhar Perfil Técnico' para ver os resultados.")
