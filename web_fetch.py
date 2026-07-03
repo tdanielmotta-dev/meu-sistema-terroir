@@ -30,7 +30,7 @@ def duckduckgo_search(query: str, max_results: int = 5):
     if not resp:
         return []
 
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.text, "html.parser")
     results = []
 
     for a in soup.select("a.result__a"):
@@ -65,7 +65,7 @@ def extract_page_summary(url: str, max_paragraphs: int = 3):
     if not resp:
         return ""
 
-    soup = BeautifulSoup(resp.text, "lxml")
+    soup = BeautifulSoup(resp.text, "html.parser")
 
     for tag in soup(["script", "style", "noscript"]):
         tag.decompose()
