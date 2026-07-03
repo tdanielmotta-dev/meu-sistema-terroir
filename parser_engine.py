@@ -1,5 +1,7 @@
-import re
-
+from local_search import search_local_wine, search_local_denomination
+from parser_engine import parse_wine_query
+from web_fetch import search_wine_online, search_denomination_online
+from knowledge_base import get_knowledge_matches
 
 KNOWN_GRAPES = [
     "cabernet sauvignon",
