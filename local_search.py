@@ -3,7 +3,9 @@ from database import fetch_all_wines, fetch_all_denominations
 
 
 def similarity(a: str, b: str) -> float:
-    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
+    a = (a or "").lower()
+    b = (b or "").lower()
+    return SequenceMatcher(None, a, b).ratio()
 
 
 def search_local_wine(query: str):
@@ -24,9 +26,12 @@ def search_local_wine(query: str):
             str(wine.get("region", "")),
             str(wine.get("country", "")),
             str(wine.get("denomination", "")),
+            str(wine.get("wine_type", "")),
+            str(wine.get("notes", "")),
         ])
 
         score = similarity(query, haystack)
+
         if query.lower() in haystack.lower():
             score += 0.35
 
@@ -34,7 +39,7 @@ def search_local_wine(query: str):
             best_score = score
             best = wine
 
-    if best and best_score >= 0.35:
+    if best and best_score >= 0.30:
         best = dict(best)
         best["_score"] = round(best_score, 4)
         return best
@@ -51,25 +56,27 @@ def search_local_denomination(query: str):
     best = None
     best_score = 0.0
 
-    for d in denoms:
+    for den in denoms:
         haystack = " ".join([
-            str(d.get("country", "")),
-            str(d.get("region", "")),
-            str(d.get("denomination", "")),
-            str(d.get("classification", "")),
-            str(d.get("allowed_grapes", "")),
-            str(d.get("notes", "")),
+            str(den.get("country", "")),
+            str(den.get("region", "")),
+            str(den.get("denomination", "")),
+            str(den.get("classification", "")),
+            str(den.get("allowed_grapes", "")),
+            str(den.get("aging_rules", "")),
+            str(den.get("notes", "")),
         ])
 
         score = similarity(query, haystack)
+
         if query.lower() in haystack.lower():
             score += 0.35
 
         if score > best_score:
             best_score = score
-            best = d
+            best = den
 
-    if best and best_score >= 0.35:
+    if best and best_score >= 0.30:
         best = dict(best)
         best["_score"] = round(best_score, 4)
         return best
