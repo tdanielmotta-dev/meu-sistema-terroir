@@ -1,47 +1,74 @@
 import streamlit as st
-import pandas as pd
 
-st.set_page_config(page_title="Minha Adega Virtual", page_icon="🍷")
-st.title("🍷 Minha Adega Virtual com Memória")
-st.write("Cadastre os vinhos que você tem em casa e guarde o seu histórico!")
+st.set_page_config(page_title="Consultor de Fichas Técnicas", page_icon="🍷")
+st.title("🍷 Consultor de Fichas Técnicas de Terroir")
+st.write("Escolha um vinho pelo rótulo para revelar as suas especificações técnicas escondidas de laboratório.")
 
-# Criar a memória do site (se ela ainda não existir)
-if "minha_adega" not in st.session_state:
-    st.session_state["minha_adega"] = []
-
-# Aba lateral para digitar os dados
-st.sidebar.header("📝 Cadastrar Novo Vinho")
-nome = st.sidebar.text_input("Nome do Vinho (Rótulo)", "Ex: Pera Manca")
-uva = st.sidebar.selectbox("Uva Principal", ["Merlot", "Cabernet Sauvignon", "Chardonnay", "Malbec", "Tannat", "Outra"])
-alcool = st.sidebar.slider("Teor Alcoólico (% vol)", 5.0, 20.0, 13.5)
-safra = st.sidebar.number_input("Ano da Safra", min_value=1900, max_value=2026, value=2023)
-nota = st.sidebar.slider("Sua Nota para o Vinho (⭐)", 1, 5, 5)
-
-# Botão mágico de salvar na memória
-bt_salvar = st.sidebar.button("💾 Salvar Vinho na Minha Adega")
-
-if bt_salvar:
-    # Cria a ficha do vinho
-    novo_vinho = {
-        "Nome": nome,
-        "Uva": uva,
-        "Álcool (%)": alcool,
-        "Safra": int(safra),
-        "Sua Nota": f"{'⭐' * nota}"
+# 1. Nosso Banco de Dados Interno (O catálogo de vinhos conhecidos pelo sistema)
+BANCO_DE_DADOS_VINHOS = {
+    "Pera Manca Tinto (Alentejo)": {
+        "Uva Principal": "Trincadeira e Aragonez",
+        "Teor Alcoólico": "14.5% vol",
+        "Tipo de Solo": "Granítico com presença de quartzo",
+        "Acidez Total": "5.8 g/L (Equilibrada)",
+        "Extrato Seco": "31.2 g/L (Muito encorpado)",
+        "IPT (Taninos)": "72 (Altíssima estrutura)",
+        "Curiosidade": "Estagia 18 meses em tonéis de carvalho e mais 24 meses em garrafa antes de ir para o mercado."
+    },
+    "Château Margaux (Bordeaux)": {
+        "Uva Principal": "Cabernet Sauvignon",
+        "Teor Alcoólico": "13.5% vol",
+        "Tipo de Solo": "Croupes de graves (Cascalho quartzoso profundo do Quaternário)",
+        "Acidez Total": "6.2 g/L (Alta e refrescante)",
+        "Extrato Seco": "29.5 g/L (Elegante e persistente)",
+        "IPT (Taninos)": "78 (Taninos finos e massivos)",
+        "Curiosidade": "É um Premier Grand Cru Classé desde a histórica Classificação de 1855."
+    },
+    "Almanaviva (Vale do Maipo)": {
+        "Uva Principal": "Cabernet Sauvignon e Carménère",
+        "Teor Alcoólico": "14.0% vol",
+        "Tipo de Solo": "Aluvial pedregoso na base da Cordilheira dos Andes",
+        "Acidez Total": "5.4 g/L (Macio)",
+        "Extrato Seco": "30.8 g/L (Estruturado)",
+        "IPT (Taninos)": "68 (Taninos maduros e sedosos)",
+        "Curiosidade": "Uma parceria lendária entre a Viña Concha y Toro e a francesa Baron Philippe de Rothschild."
+    },
+    "Brunello di Montalcino (Toscana)": {
+        "Uva Principal": "Sangiovese Grosso",
+        "Teor Alcoólico": "14.0% vol",
+        "Tipo de Solo": "Galestro (argila xistosa friável) e Albarese (calcário)",
+        "Acidez Total": "6.5 g/L (Vibrante)",
+        "Extrato Seco": "28.8 g/L (Vertical e profundo)",
+        "IPT (Taninos)": "75 (Muita garra e potência tânica)",
+        "Curiosidade": "Exige por lei um envelhecimento mínimo de 5 anos antes de ser vendido."
     }
-    # Guarda na memória do site
-    st.session_state["minha_adega"].append(novo_vinho)
-    st.sidebar.success(f"Pronto! '{nome}' foi salvo na adega!")
+}
 
-# Mostrar os vinhos salvos na tela principal
-st.subheader("📊 Meus Vinhos Cadastrados")
+# 2. Interface de Escolha para o Usuário
+st.sidebar.header("🔍 Selecione o Vinho do Rótulo")
+vinho_selecionado = st.sidebar.selectbox(
+    "Qual garrafa está na sua mão?",
+    list(BANCO_DE_DADOS_VINHOS.keys())
+)
 
-if len(st.session_state["minha_adega"]) == 0:
-    st.info("Sua adega está vazia. Use o menu do lado esquerdo para salvar o seu primeiro vinho!")
-else:
-    # Transforma a lista de vinhos em uma tabela bonita na tela
-    df = pd.DataFrame(st.session_state["minha_adega"])
-    st.dataframe(df, use_container_width=True)
+# 3. Exibição da Ficha Técnica na Tela
+if vinho_selecionado:
+    ficha = BANCO_DE_DADOS_VINHOS[vinho_selecionado]
     
-    # Mostra quantos vinhos você já tem cadastrados
-    st.metric(label="Total de Garrafas na Adega", value=len(st.session_state["minha_adega"]))
+    st.subheader(f"📋 Ficha Técnica Oculta: {vinho_selecionado}")
+    st.write("---")
+    
+    # Criando colunas bonitas para exibir os dados
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info(f"🍇 **Uva:** {ficha['Uva Principal']}")
+        st.info(f"🧪 **Teor Alcoólico:** {ficha['Teor Alcoólico']}")
+        st.info(f"💎 **Tipo de Solo:** {ficha['Tipo de Solo']}")
+        
+    with col2:
+        st.warning(f"📉 **Acidez Total:** {ficha['Acidez Total']}")
+        st.warning(f"🪵 **Extrato Seco:** {ficha['Extrato Seco']}")
+        st.warning(f"🧬 **Índice de Taninos (IPT):** {ficha['IPT (Taninos)']}")
+        
+    st.success(f"💡 **História e Curiosidade:** {ficha['Curiosidade']}")
