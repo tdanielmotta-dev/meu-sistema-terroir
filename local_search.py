@@ -1,11 +1,10 @@
 from difflib import SequenceMatcher
 from database import fetch_all_wines, fetch_all_denominations
+from knowledge_base import KNOWLEDGE_BASE
 
 
 def similarity(a: str, b: str) -> float:
-    a = (a or "").lower()
-    b = (b or "").lower()
-    return SequenceMatcher(None, a, b).ratio()
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
 def search_local_wine(query: str):
@@ -24,14 +23,12 @@ def search_local_wine(query: str):
             str(wine.get("vintage", "")),
             str(wine.get("grape", "")),
             str(wine.get("region", "")),
+            str(wine.get("subregion", "")),
             str(wine.get("country", "")),
             str(wine.get("denomination", "")),
-            str(wine.get("wine_type", "")),
-            str(wine.get("notes", "")),
-        ])
+        ]).strip()
 
         score = similarity(query, haystack)
-
         if query.lower() in haystack.lower():
             score += 0.35
 
@@ -39,8 +36,7 @@ def search_local_wine(query: str):
             best_score = score
             best = wine
 
-    if best and best_score >= 0.30:
-        best = dict(best)
+    if best and best_score >= 0.35:
         best["_score"] = round(best_score, 4)
         return best
 
@@ -56,29 +52,62 @@ def search_local_denomination(query: str):
     best = None
     best_score = 0.0
 
-    for den in denoms:
+    for d in denoms:
         haystack = " ".join([
-            str(den.get("country", "")),
-            str(den.get("region", "")),
-            str(den.get("denomination", "")),
-            str(den.get("classification", "")),
-            str(den.get("allowed_grapes", "")),
-            str(den.get("aging_rules", "")),
-            str(den.get("notes", "")),
-        ])
+            str(d.get("country", "")),
+            str(d.get("region", "")),
+            str(d.get("subregion", "")),
+            str(d.get("denomination", "")),
+            str(d.get("classification", "")),
+            str(d.get("allowed_grapes", "")),
+            str(d.get("notes", "")),
+        ]).strip()
 
         score = similarity(query, haystack)
-
         if query.lower() in haystack.lower():
             score += 0.35
 
         if score > best_score:
             best_score = score
-            best = den
+            best = d
 
-    if best and best_score >= 0.30:
-        best = dict(best)
+    if best and best_score >= 0.35:
         best["_score"] = round(best_score, 4)
         return best
 
     return None
+
+
+def search_knowledge_base(query: str):
+    query = (query or "").strip().lower()
+    if not query:
+        return []
+
+    matches = []
+
+    for item in KNOWLEDGE_BASE:
+        score = 0.0
+        aliases = item.get("aliases", [])
+        hay_parts = aliases + [
+            item.get("producer", ""),
+            item.get("wine_name", ""),
+            item.get("vintage", ""),
+            item.get("grape", ""),
+            item.get("country", ""),
+            item.get("region", ""),
+            item.get("subregion", ""),
+            item.get("denomination", ""),
+        ]
+        haystack = " ".join([str(x) for x in hay_parts if x]).lower()
+
+        score = similarity(query, haystack)
+        if query in haystack:
+            score += 0.45
+
+        if score >= 0.35:
+            obj = dict(item)
+            obj["_score"] = round(score, 4)
+            matches.append(obj)
+
+    matches.sort(key=lambda x: x.get("_score", 0), reverse=True)
+    return matches
