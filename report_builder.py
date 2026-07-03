@@ -1,73 +1,53 @@
-from parser_engine import parse_label_text
 from local_search import search_local_wine, search_local_denomination
+from parser_engine import parse_wine_query
 from web_fetch import search_wine_online, search_denomination_online
-from knowledge_base import infer_from_query
 
 
 def build_wine_report(query: str):
-    parsed = parse_label_text(query)
+    query = (query or "").strip()
 
-    local_wine = search_local_wine(query)
-    local_denomination = search_local_denomination(query)
+    parsed = parse_wine_query(query) if query else {}
 
-    # enriquecimento por parser
-    enriched_query_parts = [query]
+    wine = search_local_wine(query) if query else None
+    denomination = search_local_denomination(query) if query else None
 
-    if parsed.get("denominations_detected"):
-        enriched_query_parts.extend(parsed["denominations_detected"])
+    wine_web = search_wine_online(query) if query else []
+    denomination_web = search_denomination_online(query) if query else []
 
-    if parsed.get("grapes_detected"):
-        enriched_query_parts.extend(parsed["grapes_detected"])
-
-    enriched_query = " ".join(dict.fromkeys(enriched_query_parts))
-
-    online_wine = search_wine_online(enriched_query)
-    online_denomination = search_denomination_online(enriched_query)
-
-    kb_matches = infer_from_query(enriched_query)
-
-    summary = []
-
-    if local_wine:
-        summary.append(
-            f"Vinho localizado no banco local: {local_wine.get('producer', '')} "
-            f"{local_wine.get('wine_name', '')} ({local_wine.get('vintage', '')})."
-        )
-    else:
-        summary.append("Nenhum vinho exato foi localizado no banco local.")
-
-    if local_denomination:
-        summary.append(
-            f"Denominação localizada no banco local: {local_denomination.get('denomination', '')} "
-            f"({local_denomination.get('classification', '')})."
-        )
-    else:
-        summary.append("Nenhuma denominação exata foi localizada no banco local.")
-
-    if kb_matches:
-        summary.append(
-            f"Knowledge base identificou {len(kb_matches)} denominação(ões)/região(ões) compatível(is) com o texto do rótulo."
-        )
-    else:
-        summary.append("Knowledge base não encontrou uma denominação fortemente reconhecida no texto.")
-
-    if online_wine:
-        summary.append(f"Foram encontrados {len(online_wine)} resultados online relacionados ao vinho/rótulo.")
-    else:
-        summary.append("Nenhum resultado online relevante do vinho foi encontrado nesta rodada.")
-
-    if online_denomination:
-        summary.append(f"Foram encontrados {len(online_denomination)} resultados online sobre denominação/região.")
-    else:
-        summary.append("Nenhum resultado online relevante de denominação foi encontrado nesta rodada.")
-
-    return {
+    report = {
         "query": query,
-        "parsed": parsed,
-        "wine_found": local_wine,
-        "denomination_found": local_denomination,
-        "knowledge_matches": kb_matches,
-        "online_wine_results": online_wine,
-        "online_denomination_results": online_denomination,
-        "summary": summary
+        "parsed_query": parsed,
+        "wine_found": wine,
+        "denomination_found": denomination,
+        "web": {
+            "wine_results": wine_web,
+            "denomination_results": denomination_web,
+        },
+        "summary": []
     }
+
+    if wine:
+        report["summary"].append(
+            f"Vinho localizado no banco: {wine.get('producer', '')} {wine.get('wine_name', '')} ({wine.get('vintage', '')})"
+        )
+    else:
+        report["summary"].append("Nenhum vinho correspondente foi localizado no banco local.")
+
+    if denomination:
+        report["summary"].append(
+            f"Denominação localizada: {denomination.get('denomination', '')} - {denomination.get('classification', '')}"
+        )
+    else:
+        report["summary"].append("Nenhuma denominação correspondente foi localizada no banco local.")
+
+    if wine_web:
+        report["summary"].append(f"Busca online de vinho retornou {len(wine_web)} resultado(s).")
+    else:
+        report["summary"].append("Busca online de vinho sem resultados úteis.")
+
+    if denomination_web:
+        report["summary"].append(f"Busca online de denominação retornou {len(denomination_web)} resultado(s).")
+    else:
+        report["summary"].append("Busca online de denominação sem resultados úteis.")
+
+    return report
