@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path("/tmp/wineindex.db")
+DB_PATH = Path("wineindex.db")
 
 
 def get_connection():
@@ -24,7 +24,6 @@ def init_db():
         region TEXT,
         country TEXT,
         denomination TEXT,
-        classification TEXT,
         wine_type TEXT,
         alcohol REAL,
         notes TEXT
@@ -53,60 +52,45 @@ def seed_if_empty():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT COUNT(*) AS c FROM wines")
-    wines_count = cur.fetchone()["c"]
+    cur.execute("SELECT COUNT(*) FROM wines")
+    wines_count = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) AS c FROM denominations")
-    den_count = cur.fetchone()["c"]
+    cur.execute("SELECT COUNT(*) FROM denominations")
+    den_count = cur.fetchone()[0]
 
     if wines_count == 0:
         wines_seed = [
             (
-                "Château Margaux",
-                "Pavillon Rouge",
-                "2015",
-                "Cabernet Sauvignon, Merlot, Petit Verdot, Cabernet Franc",
+                "Château Exemplo",
+                "Merlot Reserva",
+                "2020",
+                "Merlot",
                 "Bordeaux",
                 "França",
-                "Margaux",
-                "AOC",
+                "Bordeaux AOC",
                 "Tinto",
                 13.5,
-                "Segundo vinho de Château Margaux; Médoc, margem esquerda."
+                "Exemplo inicial de vinho no banco"
             ),
             (
-                "Vietti",
-                "Castiglione",
-                "2019",
+                "Cantina Exemplo",
+                "Barolo Classico",
+                "2018",
                 "Nebbiolo",
                 "Piemonte",
                 "Itália",
-                "Barolo",
-                "DOCG",
+                "Barolo DOCG",
                 "Tinto",
                 14.0,
-                "Barolo clássico com blend de vinhedos do produtor."
-            ),
-            (
-                "Miolo",
-                "Lote 43",
-                "2020",
-                "Merlot, Cabernet Sauvignon",
-                "Vale dos Vinhedos",
-                "Brasil",
-                "Vale dos Vinhedos",
-                "D.O.",
-                "Tinto",
-                14.0,
-                "Ícone brasileiro; corte bordalês."
+                "Exemplo inicial de vinho no banco"
             ),
         ]
 
         cur.executemany("""
         INSERT INTO wines (
             producer, wine_name, vintage, grape, region, country,
-            denomination, classification, wine_type, alcohol, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            denomination, wine_type, alcohol, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, wines_seed)
 
     if den_count == 0:
@@ -114,32 +98,42 @@ def seed_if_empty():
             (
                 "França",
                 "Bordeaux",
-                "Margaux",
+                "Bordeaux AOC",
                 "AOC",
-                "Cabernet Sauvignon, Merlot, Cabernet Franc, Petit Verdot, Malbec, Carmenère",
+                "Merlot, Cabernet Sauvignon, Cabernet Franc, Sauvignon Blanc, Semillon, Muscadelle",
                 10.5,
-                "Regras variam por estilo e pelo caderno da denominação aplicável",
-                "Appellation do Médoc, margem esquerda de Bordeaux."
+                "Variável conforme subzona e estilo",
+                "Denominação genérica de Bordeaux"
             ),
             (
                 "Itália",
                 "Piemonte",
-                "Barolo",
+                "Barolo DOCG",
                 "DOCG",
                 "Nebbiolo",
                 13.0,
-                "Maturação obrigatória conforme disciplinare da DOCG",
-                "Denominação clássica do Piemonte."
+                "Maturação obrigatória conforme regra da DOCG",
+                "Denominação clássica do Piemonte"
             ),
             (
-                "Brasil",
-                "Vale dos Vinhedos",
-                "Vale dos Vinhedos",
-                "D.O.",
-                "Conforme regulamento da D.O. e categoria do vinho",
-                None,
-                "Conforme regulamento vigente do conselho regulador",
-                "Denominação de origem brasileira relevante da Serra Gaúcha."
+                "Itália",
+                "Piemonte",
+                "Barbaresco DOCG",
+                "DOCG",
+                "Nebbiolo",
+                12.5,
+                "Maturação obrigatória conforme regra da DOCG",
+                "Denominação clássica do Piemonte"
+            ),
+            (
+                "França",
+                "Bordeaux",
+                "Sauternes AOC",
+                "AOC",
+                "Semillon, Sauvignon Blanc, Muscadelle",
+                12.0,
+                "Vinhos doces botrytizados; regras específicas de produção",
+                "Denominação célebre de vinhos doces de Bordeaux"
             ),
         ]
 
