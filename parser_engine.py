@@ -1,72 +1,67 @@
 import re
 
-KNOWN_GRAPES = [
-    "cabernet sauvignon", "cabernet franc", "merlot", "pinot noir",
-    "chardonnay", "sauvignon blanc", "riesling", "syrah", "shiraz",
-    "malbec", "nebbiolo", "sangiovese", "tempranillo", "grenache",
-    "garnacha", "mourvedre", "monastrell", "carignan", "carmenere",
-    "carménère", "touriga nacional", "chenin blanc", "gewurztraminer",
-    "viognier", "albarino", "albariño", "semillon", "sémillon",
-    "petit verdot", "zinfandel", "barbera", "dolcetto"
+GRAPES = [
+    "Merlot", "Cabernet Sauvignon", "Cabernet Franc", "Chardonnay",
+    "Pinot Noir", "Sauvignon Blanc", "Riesling", "Syrah", "Shiraz",
+    "Malbec", "Nebbiolo", "Sangiovese", "Tempranillo", "Carménère",
+    "Carmenere", "Touriga Nacional", "Semillon", "Sémillon",
+    "Petit Verdot", "Barbera", "Dolcetto", "Grenache", "Garnacha",
+    "Pinot Grigio", "Moscato", "Gewurztraminer", "Viognier"
 ]
 
-KNOWN_COUNTRIES = [
-    "frança", "france", "itália", "italia", "espanha", "spain",
-    "portugal", "argentina", "chile", "brasil", "alemanha",
-    "germany", "austrália", "australia", "eua", "usa",
-    "estados unidos", "nova zelândia", "new zealand",
-    "áfrica do sul", "south africa"
+COUNTRIES = [
+    "Chile", "França", "France", "Itália", "Italia", "Spain", "Espanha",
+    "Portugal", "Argentina", "Brasil", "Germany", "Alemanha",
+    "United States", "USA", "Estados Unidos", "South Africa",
+    "África do Sul", "New Zealand", "Nova Zelândia", "Australia", "Austrália"
 ]
 
-KNOWN_REGIONS = [
-    "bordeaux", "bourgogne", "burgundy", "champagne", "alsace",
-    "loire", "rhône", "rhone", "barolo", "barbaresco", "piemonte",
-    "piedmont", "toscana", "tuscany", "chianti", "montalcino",
-    "rioja", "ribera del duero", "priorat", "douro", "dão", "dao",
-    "vinho verde", "mendoza", "maipo", "colchagua", "mosel",
-    "rheingau", "napa valley", "sonoma", "barossa", "marlborough",
-    "stellenbosch", "valle central", "maipo valley", "colchagua valley"
+REGIONS = [
+    "Valle Central", "Maipo", "Colchagua", "Casablanca", "Maule",
+    "Bordeaux", "Bourgogne", "Champagne", "Rhône", "Loire", "Alsace",
+    "Piemonte", "Toscana", "Barolo", "Barbaresco", "Chianti",
+    "Rioja", "Ribera del Duero", "Priorat", "Douro", "Dão",
+    "Mosel", "Rheingau", "Mendoza", "Napa Valley", "Sonoma",
+    "Marlborough", "Stellenbosch"
 ]
 
-KNOWN_DENOMINATIONS = [
-    "aoc", "aop", "doc", "docg", "igp", "dop", "igt", "doca",
-    "bordeaux aoc", "barolo docg", "barbaresco docg",
-    "chianti classico docg", "rioja doca", "douro doc"
+DENOMINATIONS = [
+    "DOCG", "DOC", "AOC", "AOP", "IGP", "DOP", "IGT", "DO", "DOCa"
 ]
 
 
-def normalize_text(text: str) -> str:
-    text = (text or "").strip()
-    text = re.sub(r"\s+", " ", text)
-    return text
+def normalize_spaces(text: str) -> str:
+    return re.sub(r"\s+", " ", (text or "")).strip()
 
 
-def extract_vintage(text: str):
-    years = re.findall(r"\b(19\d{2}|20\d{2})\b", text)
-    return years[0] if years else None
-
-
-def find_first_match(text: str, candidates: list):
-    text_lower = text.lower()
-    for item in candidates:
-        if item.lower() in text_lower:
+def find_first_keyword(text: str, keywords: list):
+    low = (text or "").lower()
+    for item in keywords:
+        if item.lower() in low:
             return item
     return None
 
 
-def tokenize_query(text: str):
-    return re.findall(r"[a-zA-ZÀ-ÿ0-9\-']+", text.lower())
-
-
 def parse_wine_query(query: str):
-    normalized = normalize_text(query)
+    query = normalize_spaces(query)
+    tokens = query.split()
+
+    vintage = None
+    m = re.search(r"\b(19\d{2}|20\d{2})\b", query)
+    if m:
+        vintage = m.group(1)
+
+    grape = find_first_keyword(query, GRAPES)
+    country = find_first_keyword(query, COUNTRIES)
+    region = find_first_keyword(query, REGIONS)
+    denomination = find_first_keyword(query, DENOMINATIONS)
+
     return {
-        "original_query": query,
-        "normalized_query": normalized,
-        "vintage": extract_vintage(normalized),
-        "grape": find_first_match(normalized, KNOWN_GRAPES),
-        "country": find_first_match(normalized, KNOWN_COUNTRIES),
-        "region": find_first_match(normalized, KNOWN_REGIONS),
-        "denomination": find_first_match(normalized, KNOWN_DENOMINATIONS),
-        "tokens": tokenize_query(normalized)
+        "normalized_query": query,
+        "tokens": tokens,
+        "vintage": vintage,
+        "grape": grape,
+        "country": country,
+        "region":region,
+      "denomination": denomination
     }
