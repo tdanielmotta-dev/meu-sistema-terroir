@@ -6,9 +6,9 @@ from knowledge_base import get_knowledge_matches
 from web_fetch import search_wine_online, search_denomination_online
 
 
-# ---------------------------------------
+# --------------------------------------------------
 # BUSCA LOCAL
-# ---------------------------------------
+# --------------------------------------------------
 
 def similarity(a: str, b: str) -> float:
     a = (a or "").lower()
@@ -88,14 +88,14 @@ def search_local_denomination(query: str):
     return None
 
 
-# ---------------------------------------
-# CONSOLIDAÇÃO
-# ---------------------------------------
+# --------------------------------------------------
+# PERFIL
+# --------------------------------------------------
 
 PROFILE_KEYS = [
     "wine_title", "producer", "vintage", "country", "region",
     "denomination", "classification", "wine_type", "grape",
-    "alcohol", "body", "acidity", "tannin", "oak",
+    "alcohol", "min_alcohol", "body", "acidity", "tannin", "oak",
     "aroma", "flavor", "soil", "climate", "allowed_grapes",
     "aging_rules"
 ]
@@ -114,6 +114,7 @@ def empty_profile(query: str):
         "wine_type": None,
         "grape": None,
         "alcohol": None,
+        "min_alcohol": None,
         "body": None,
         "acidity": None,
         "tannin": None,
@@ -137,6 +138,10 @@ def apply_if_empty(profile: dict, key: str, value, source_label: str = None):
         if source_label:
             profile["sources_used"].append(f"{key} ← {source_label}")
 
+
+# --------------------------------------------------
+# MERGES
+# --------------------------------------------------
 
 def merge_parsed(profile: dict, parsed: dict):
     if not parsed:
@@ -199,9 +204,8 @@ def merge_local_denom(profile: dict, denom: dict):
     for k, v in mapping.items():
         apply_if_empty(profile, k, v, "banco local denominação")
 
-    if denom.get("min_alcohol") and not profile.get("alcohol"):
-        profile["alcohol"] = f"Mínimo legal da denominação: {denom.get('min_alcohol')}%"
-        profile["sources_used"].append("alcohol ← banco local denominação")
+    if denom.get("min_alcohol"):
+        apply_if_empty(profile, "min_alcohol", f"{denom.get('min_alcohol')}%", "banco local denominação")
 
     if denom.get("notes"):
         profile["notes"].append(f"Banco local denominação: {denom.get('notes')}")
@@ -243,28 +247,26 @@ def merge_kb(profile: dict, kb_matches: list):
 
 
 def merge_web_pages(profile: dict, pages: list, source_prefix: str):
-    """
-    Regra: a internet agora preenche a ficha.
-    Cada página traz item["extracted"] com campos estruturados.
-    """
     for idx, page in enumerate(pages or [], start=1):
         extracted = page.get("extracted", {})
         if not extracted:
             continue
 
-        src = f"{source_prefix}#{idx}"
+        source_type = extracted.get("source_type", "generic")
+        src = f"{source_prefix}:{source_type}#{idx}"
 
         for key in [
             "producer", "vintage", "country", "region", "classification",
-            "grape", "alcohol", "aroma", "flavor", "body", "acidity",
-            "tannin", "oak", "soil", "climate", "aging_rules"
+            "grape", "alcohol", "min_alcohol", "aroma", "flavor", "body",
+            "acidity", "tannin", "oak", "soil", "climate",
+            "aging_rules", "allowed_grapes"
         ]:
             apply_if_empty(profile, key, extracted.get(key), src)
 
         title = page.get("title")
         url = page.get("url")
         if title or url:
-            profile["notes"].append(f"Fonte web lida: {title or 'sem título'} | {url or ''}")
+            profile["notes"].append(f"Fonte web lida [{source_type}]: {title or 'sem título'} | {url or ''}")
 
 
 def build_summary(wine, denom, kb_matches, wine_web, denom_web, profile):
@@ -294,9 +296,9 @@ def build_summary(wine, denom, kb_matches, wine_web, denom_web, profile):
     return summary
 
 
-# ---------------------------------------
+# --------------------------------------------------
 # FUNÇÃO PRINCIPAL
-# ---------------------------------------
+# --------------------------------------------------
 
 def build_wine_report(query: str):
     query = (query or "").strip()
@@ -306,24 +308,18 @@ def build_wine_report(query: str):
     denom = search_local_denomination(query) if query else None
     kb_matches = get_knowledge_matches(query, parsed) if query else []
 
-    # Internet real: busca + extrai campos
-    wine_web = search_wine_online(query, max_pages=5) if query else []
+    wine_web = search_wine_online(query, max_pages=6) if query else []
+
     denom_query = query
     if parsed.get("region"):
         denom_query += f" {parsed.get('region')}"
     if parsed.get("denomination"):
         denom_query += f" {parsed.get('denomination')}"
-    denom_web = search_denomination_online(denom_query, max_pages=5) if query else []
+
+    denom_web = search_denomination_online(denom_query, max_pages=6) if query else []
 
     profile = empty_profile(query)
 
-    # Ordem de merge:
-    # 1 parser
-    # 2 banco local vinho
-    # 3 banco local denominação
-    # 4 knowledge base
-    # 5 internet vinho
-    # 6 internet denominação
     merge_parsed(profile, parsed)
     merge_local_wine(profile, wine)
     merge_local_denom(profile, denom)
