@@ -1,63 +1,39 @@
 import streamlit as st
-import matplotlib.pyplot as plt
 
-# Configuração da página web
-st.set_page_config(page_title="Terroir Intelligence", page_icon="🍷")
+st.set_page_config(page_title="Rastreamento de Rótulos", page_icon="🍷")
+st.title("🍷 Fiscalizador de Rótulos de Vinho")
+st.write("Verifique se as informações do rótulo da garrafa cumprem as regras da região.")
 
-st.title("🍷 Terroir Intelligence System")
-st.write("Bem-vindo ao painel online de certificação de Denominações de Origem.")
-
-# 1. Regras do jogo (Limites da D.O.)
-LIMITES_DO = {
-    "acidez_volatil_max": 15.0,
-    "alcool_min": 12.0,
-    "extrato_seco_min": 27.0,
-    "ipt_min": 60
+# Regras Oficiais baseadas no que vem no rótulo
+REGRAS_DO = {
+    "alcool_minimo": 12.0,
+    "uvas_permitidas": ["Merlot", "Chardonnay", "Pinot Noir", "Cabernet Sauvignon", "Malbec"],
+    "safra_maxima": 2026
 }
 
-st.sidebar.header("🧪 Testar Seu Próprio Vinho")
-nome_vinho = st.sidebar.text_input("Nome do Vinho", "Meu Merlot Artesanal")
-acidez = st.sidebar.slider("Acidez Volátil (meq/L)", 5.0, 20.0, 11.2)
-alcool = st.sidebar.slider("Teor Alcoólico (% v/v)", 9.0, 16.0, 13.5)
-extrato = st.sidebar.slider("Extrato Seco (g/L)", 15.0, 40.0, 29.4)
-ipt = st.sidebar.slider("Índice de Polifenóis (IPT)", 30, 90, 64)
+st.sidebar.header("📝 Digite os Dados do Rótulo")
+nome = st.sidebar.text_input("Nome do Vinho", "Meu Vinho Favorito")
+uva = st.sidebar.selectbox("Uva Principal (Casta)", ["Merlot", "Cabernet Sauvignon", "Chardonnay", "Pinot Noir", "Malbec", "Tannat"])
+alcool = st.sidebar.number_input("Teor Alcoólico (% vol) indicado no rótulo", min_value=5.0, max_value=20.0, value=13.0, step=0.1)
+safra = st.sidebar.number_input("Ano da Safra", min_value=1900, max_value=2030, value=2024)
 
-# Lista de vinhos padrão + o vinho que você mexer nos botões
-lotes = [
-    {"nome": "Vinho Reserva Premium", "acidez_volatil": 11.2, "alcool": 13.5, "extrato_seco": 29.4, "ipt": 64},
-    {"nome": "Vinho de Mesa Comum", "acidez_volatil": 16.2, "alcool": 11.1, "extrato_seco": 24.0, "ipt": 45},
-    {"nome": "Vinho Gran Terroir", "acidez_volatil": 10.5, "alcool": 14.0, "extrato_seco": 31.0, "ipt": 70},
-    {"nome": nome_vinho, "acidez_volatil": acidez, "alcool": alcool, "extrato_seco": extrato, "ipt": ipt}
-]
+# Execução da análise do Rótulo
+erros = []
 
-aprovados = 0
-reprovados = 0
+if alcool < REGRAS_DO["alcool_minimo"]:
+    erros.append(f"Álcool abaixo do exigido para esta D.O. (O rótulo indica {alcool}%, mas o mínimo é {REGRAS_DO['alcool_minimo']}%).")
 
-st.subheader("📋 Relatório de Análise dos Lotes")
+if uva not in REGRAS_DO["uvas_permitidas"]:
+    erros.append(f"A uva '{uva}' não é autorizada nesta região protegida.")
 
-for lote in lotes:
-    erros = []
-    if lote["acidez_volatil"] > LIMITES_DO["acidez_volatil_max"]:
-        erros.append(f"Acidez alta ({lote['acidez_volatil']} > {LIMITES_DO['acidez_volatil_max']})")
-    if lote["alcool"] < LIMITES_DO["alcool_min"]:
-        erros.append(f"Álcool baixo ({lote['alcool']}% < {LIMITES_DO['alcool_min']}%)")
-    if lote["extrato_seco"] < LIMITES_DO["extrato_seco_min"]:
-        erros.append(f"Muito ralo ({lote['extrato_seco']}g/L < {LIMITES_DO['extrato_seco_min']}g/L)")
-    if lote["ipt"] < LIMITES_DO["ipt_min"]:
-        erros.append(f"Pouca cor/tanino (IPT {lote['ipt']} < {LIMITES_DO['ipt_min']})")
-        
-    if erros:
-        reprovados += 1
-        st.error(f"❌ **{lote['nome']}** - REPROVADO")
-        for e in erros:
-            st.write(f"  ↳ {e}")
-    else:
-        aprovados += 1
-        st.success(f"✅ **{lote['nome']}** - APROVADO! Selo D.O. Concedido.")
+if safra > REGRAS_DO["safra_maxima"]:
+    erros.append(f"Ano de safra inválido ou futuro ({safra}).")
 
-# Mostrar gráfico na tela
-st.subheader("📊 Estatísticas Consolidadas")
-fig, ax = plt.subplots(figsize=(5, 3))
-ax.bar(['Aprovados', 'Reprovados'], [aprovados, reprovados], color=['#2ca02c', '#d62728'], width=0.4)
-ax.set_ylabel('Quantidade')
-st.pyplot(fig)
+st.subheader("🔍 Resultado da Auditoria do Rótulo")
+
+if erros:
+    st.error(f"❌ **{nome}** possui inconformidades no rótulo:")
+    for e in erros:
+        st.write(f" ↳ {e}")
+else:
+    st.success(f"✅ **{nome}** cumpre todas as exigências visíveis do rótulo! Selo D.O. Confirmado.")
