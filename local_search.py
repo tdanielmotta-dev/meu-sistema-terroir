@@ -10,6 +10,23 @@ def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
+def score_match(query: str, haystack: str, bonus_terms=None) -> float:
+    score = similarity(query, haystack)
+
+    query_low = query.lower()
+    hay_low = haystack.lower()
+
+    if query_low in hay_low:
+        score += 0.35
+
+    if bonus_terms:
+        for term in bonus_terms:
+            if term and str(term).lower() in hay_low:
+                score += 0.08
+
+    return score
+
+
 def search_local_wine(query: str):
     query = (query or "").strip()
     if not query:
@@ -28,13 +45,20 @@ def search_local_wine(query: str):
             str(wine.get("region", "")),
             str(wine.get("country", "")),
             str(wine.get("denomination", "")),
+            str(wine.get("classification", "")),
             str(wine.get("wine_type", "")),
             str(wine.get("notes", "")),
         ])
 
-        score = similarity(query, haystack)
-        if query.lower() in haystack.lower():
-            score += 0.35
+        bonus = [
+            wine.get("producer"),
+            wine.get("wine_name"),
+            wine.get("denomination"),
+            wine.get("region"),
+            wine.get("classification"),
+        ]
+
+        score = score_match(query, haystack, bonus_terms=bonus)
 
         if score > best_score:
             best_score = score
@@ -67,9 +91,14 @@ def search_local_denomination(query: str):
             str(d.get("notes", "")),
         ])
 
-        score = similarity(query, haystack)
-        if query.lower() in haystack.lower():
-            score += 0.35
+        bonus = [
+            d.get("country"),
+            d.get("region"),
+            d.get("denomination"),
+            d.get("classification"),
+        ]
+
+        score = score_match(query, haystack, bonus_terms=bonus)
 
         if score > best_score:
             best_score = score
