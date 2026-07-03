@@ -1,81 +1,136 @@
+from difflib import SequenceMatcher
+
 KNOWLEDGE_BASE = {
-    "gato negro merlot": {
+    "gato_negro_merlot": {
+        "aliases": [
+            "Gato Negro Merlot",
+            "Gato Negro Merlot 2020",
+            "Gato Negro",
+        ],
         "producer": "Viña San Pedro",
         "country": "Chile",
         "region": "Valle Central",
-        "denomination": "Indicação geográfica / origem chilena",
-        "classification": "IG",
+        "denomination": None,
+        "classification": None,
         "wine_type": "Tinto",
         "grape": "Merlot",
-        "alcohol": "13.0% vol (pode variar por safra/lote/mercado)",
-        "aroma": "Frutas vermelhas maduras, ameixa, leve toque herbáceo, notas simples e frutadas",
-        "flavor": "Frutado, macio, corpo médio, taninos suaves, final simples",
+        "alcohol": None,
         "body": "Médio",
         "acidity": "Média",
-        "tannin": "Baixos a médios / macios",
-        "oak": "Geralmente discreta ou ausente no perfil base",
-        "soil": "Composição variável; em macrovisão do Valle Central aparecem solos aluviais e coluviais",
-        "climate": "Mediterrâneo, com boa insolação e forte importância da amplitude térmica em algumas áreas",
-        "aging_rules": "Não há regra de envelhecimento equivalente a DOCG/AOC para o rótulo comercial em si",
-        "notes": "Perfil de mercado focado em fruta, maciez e facilidade de consumo"
+        "tannin": "Macios",
+        "oak": None,
+        "aroma": "Frutas vermelhas maduras, ameixa, toques herbais suaves",
+        "flavor": "Frutado, macio, acessível, taninos suaves",
+        "soil": None,
+        "climate": "Mediterrâneo / quente a moderado conforme zona do Valle Central",
+        "aging_rules": None,
+        "grapes": "Merlot",
+        "notes": "Entrada base de referência para Gato Negro Merlot."
     },
-    "bordeaux": {
-        "country": "França",
-        "classification": "AOC / AOP",
-        "style": "Tintos de corte bordalês, brancos secos e doces botrytizados conforme sub-região",
-        "grapes": "Merlot, Cabernet Sauvignon, Cabernet Franc, Sémillon, Sauvignon Blanc, Muscadelle",
-        "soil": "Cascalho, argila, calcário, areia",
-        "climate": "Oceânico / marítimo",
-        "notes": "Macro-região histórica com enorme diversidade de subzonas"
+    "casillero_del_diablo_cabernet": {
+        "aliases": [
+            "Casillero del Diablo Cabernet Sauvignon",
+            "Casillero del Diablo Cabernet",
+        ],
+        "producer": "Concha y Toro",
+        "country": "Chile",
+        "region": "Valle Central",
+        "denomination": None,
+        "classification": None,
+        "wine_type": "Tinto",
+        "grape": "Cabernet Sauvignon",
+        "alcohol": None,
+        "body": "Médio a encorpado",
+        "acidity": "Média",
+        "tannin": "Médios",
+        "oak": "Pode haver uso de carvalho conforme edição/linha",
+        "aroma": "Cassis, cereja preta, especiarias, leve baunilha",
+        "flavor": "Fruta negra, especiarias, estrutura média",
+        "soil": None,
+        "climate": None,
+        "aging_rules": None,
+        "grapes": "Cabernet Sauvignon",
+        "notes": "Entrada base de referência para Casillero del Diablo Cabernet Sauvignon."
     },
-    "barolo docg": {
+    "barolo_docg": {
+        "aliases": [
+            "Barolo", "Barolo DOCG"
+        ],
+        "producer": None,
         "country": "Itália",
+        "region": "Piemonte",
+        "denomination": "Barolo DOCG",
         "classification": "DOCG",
-        "style": "Nebbiolo de alto potencial de guarda",
+        "wine_type": "Tinto",
+        "grape": "Nebbiolo",
+        "alcohol": "mínimo legal depende do disciplinare vigente",
+        "body": "Encorpado",
+        "acidity": "Alta",
+        "tannin": "Firmes",
+        "oak": "frequente, mas varia por produtor e estilo",
+        "aroma": "Rosa, alcatrão, cereja, ervas, especiarias",
+        "flavor": "Estruturado, longevo, taninos marcantes",
+        "soil": "Margas calcárias e argilosas, com variações locais",
+        "climate": "Continental, influência de altitude e neblina",
+        "aging_rules": "Barolo DOCG possui exigências legais de envelhecimento previstas no disciplinare",
         "grapes": "Nebbiolo",
-        "soil": "Margas calcárias, argila e calcário em várias comunas",
-        "climate": "Continental com forte influência de colinas",
-        "notes": "Uma das denominações mais emblemáticas do Piemonte"
+        "notes": "Base geral da denominação Barolo DOCG."
     },
-    "rioja doca": {
-        "country": "Espanha",
-        "classification": "DOCa",
-        "style": "Tintos tradicionais de Tempranillo e blends, além de rosados e brancos",
-        "grapes": "Tempranillo, Garnacha, Graciano, Mazuelo e outras autorizadas",
-        "soil": "Muito variável conforme Rioja Alta, Alavesa e Oriental",
-        "climate": "Mistura de influências atlântica, continental e mediterrânea",
-        "notes": "Região clássica com forte tradição de barrica"
+    "bordeaux_aoc": {
+        "aliases": [
+            "Bordeaux", "Bordeaux AOC"
+        ],
+        "producer": None,
+        "country": "França",
+        "region": "Bordeaux",
+        "denomination": "Bordeaux AOC",
+        "classification": "AOC",
+        "wine_type": None,
+        "grape": None,
+        "alcohol": None,
+        "body": None,
+        "acidity": None,
+        "tannin": None,
+        "oak": None,
+        "aroma": None,
+        "flavor": None,
+        "soil": "Diversos, incluindo cascalho, argilo-calcário e areia, conforme subzona",
+        "climate": "Marítimo / atlântico temperado",
+        "aging_rules": None,
+        "grapes": "Merlot, Cabernet Sauvignon, Cabernet Franc e outras conforme denominação/subzona",
+        "notes": "Base geral da região Bordeaux."
     }
 }
 
 
-def get_knowledge_matches(query: str, parsed_query: dict):
-    matches = []
+def similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
 
-    q = (query or "").lower().strip()
-    if q in KNOWLEDGE_BASE:
-        matches.append({"key": q, "data": KNOWLEDGE_BASE[q]})
 
-    normalized = (parsed_query or {}).get("normalized_query", "").lower().strip()
+def get_knowledge_matches(query: str, parsed: dict = None):
+    query = (query or "").strip()
+    if not query:
+        return []
+
+    results = []
+
     for key, data in KNOWLEDGE_BASE.items():
-        if key in normalized or normalized in key:
-            if {"key": key, "data": data} not in matches:
-                matches.append({"key": key, "data": data})
+        aliases = data.get("aliases", [])
+        best_score = 0.0
 
-    region = (parsed_query or {}).get("region", "")
-    if region:
-        region = region.lower().strip()
-        if region in KNOWLEDGE_BASE:
-            item = {"key": region, "data": KNOWLEDGE_BASE[region]}
-            if item not in matches:
-                matches.append(item)
+        for alias in aliases:
+            score = similarity(query, alias)
+            if alias.lower() in query.lower() or query.lower() in alias.lower():
+                score += 0.35
+            if score > best_score:
+                best_score = score
 
-    denomination = (parsed_query or {}).get("denomination", "")
-    if denomination:
-        denomination = denomination.lower().strip()
-        if denomination in KNOWLEDGE_BASE:
-            item = {"key": denomination, "data": KNOWLEDGE_BASE[denomination]}
-            if item not in matches:
-                matches.append(item)
+        if best_score >= 0.35:
+            results.append({
+                "key": key,
+                "score": round(best_score, 4),
+                "data": data
+            })
 
-    return matches
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results
