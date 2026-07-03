@@ -3,11 +3,11 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (WineIndex/1.0; +https://streamlit.app)"
+    "User-Agent": "Mozilla/5.0 (WineIndex/1.0)"
 }
 
 
-def safe_get(url: str, timeout: int = 15):
+def safe_get(url: str, timeout: int = 20):
     try:
         resp = requests.get(url, headers=HEADERS, timeout=timeout)
         resp.raise_for_status()
@@ -16,13 +16,13 @@ def safe_get(url: str, timeout: int = 15):
         return None
 
 
-def duckduckgo_search(query: str, max_results: int = 5):
+def duckduckgo_search(query: str, max_results: int = 6):
     query = (query or "").strip()
     if not query:
         return []
 
     search_url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
-    resp = safe_get(search_url, timeout=20)
+    resp = safe_get(search_url)
     if not resp:
         return []
 
@@ -54,7 +54,7 @@ def duckduckgo_search(query: str, max_results: int = 5):
 
 
 def extract_page_summary(url: str, max_paragraphs: int = 3):
-    resp = safe_get(url, timeout=20)
+    resp = safe_get(url)
     if not resp:
         return ""
 
@@ -66,7 +66,7 @@ def extract_page_summary(url: str, max_paragraphs: int = 3):
     paragraphs = []
     for p in soup.find_all("p"):
         txt = p.get_text(" ", strip=True)
-        if len(txt) >= 60:
+        if len(txt) >= 80:
             paragraphs.append(txt)
         if len(paragraphs) >= max_paragraphs:
             break
@@ -75,34 +75,51 @@ def extract_page_summary(url: str, max_paragraphs: int = 3):
 
 
 def search_wine_online(query: str):
-    results = duckduckgo_search(
-        f'"{query}" vinho OR wine OR winery OR domaine OR cantina',
-        max_results=5
-    )
+    queries = [
+        f'"{query}" wine',
+        f'"{query}" vinho',
+        f'"{query}" winery',
+        f'"{query}" tasting notes',
+    ]
 
-    enriched = []
-    for item in results[:3]:
-        summary = extract_page_summary(item["url"], max_paragraphs=2)
-        enriched.append({
-            **item,
-            "page_summary": summary
-        })
+    final = []
+    seen = set()
 
-    return enriched
+    for q in queries:
+        results = duckduckgo_search(q, max_results=4)
+        for item in results:
+            url = item.get("url", "")
+            if url in seen:
+                continue
+            seen.add(url)
+            item["page_summary"] = extract_page_summary(url, max_paragraphs=2)
+            final.append(item)
+            if len(final) >= 6:
+                return final
+
+    return final
 
 
 def search_denomination_online(query: str):
-    results = duckduckgo_search(
-        f'"{query}" appellation OR DOCG OR AOC OR DOP OR denominazione OR terroir',
-        max_results=5
-    )
+    queries = [
+        f'"{query}" appellation terroir',
+        f'"{query}" DOCG AOC DO DOC',
+        f'"{query}" wine region soil climate grapes',
+    ]
 
-    enriched = []
-    for item in results[:3]:
-        summary = extract_page_summary(item["url"], max_paragraphs=2)
-        enriched.append({
-            **item,
-            "page_summary": summary
-        })
+    final = []
+    seen = set()
 
-    return enriched
+    for q in queries:
+        results = duckduckgo_search(q, max_results=4)
+        for item in results:
+            url = item.get("url", "")
+            if url in seen:
+                continue
+            seen.add(url)
+            item["page_summary"] = extract_page_summary(url, max_paragraphs=2)
+            final.append(item)
+            if len(final) >= 6:
+                return final
+
+    return final
