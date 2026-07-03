@@ -1,12 +1,10 @@
 import sqlite3
-from datetime import datetime
+from seed_data import SEED_DENOMINATIONS, SEED_WINES
 
 DB_NAME = "wineindex.db"
 
-
 def get_conn():
     return sqlite3.connect(DB_NAME, check_same_thread=False)
-
 
 def init_db():
     conn = get_conn()
@@ -15,113 +13,109 @@ def init_db():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS denominations (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        universal_id TEXT UNIQUE NOT NULL,
-        country TEXT NOT NULL,
+        universal_id TEXT UNIQUE,
+        country TEXT,
         macro_region TEXT,
-        sub_region TEXT NOT NULL,
-        appellation_name TEXT NOT NULL,
+        sub_region TEXT,
+        appellation_name TEXT,
         legal_level TEXT,
         wine_color_scope TEXT,
         alcohol_min REAL,
-        alcohol_max REAL,
-        vintage_max INTEGER,
         allowed_grapes TEXT,
-        notes TEXT,
-        created_at TEXT,
-        updated_at TEXT
+        notes TEXT
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS wines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wine_name TEXT,
+        producer TEXT,
+        country TEXT,
+        macro_region TEXT,
+        sub_region TEXT,
+        appellation_name TEXT,
+        vintage TEXT,
+        grapes TEXT,
+        style TEXT,
+        notes TEXT
     )
     """)
 
     conn.commit()
     conn.close()
 
-
 def seed_if_empty():
     conn = get_conn()
     cur = conn.cursor()
 
     cur.execute("SELECT COUNT(*) FROM denominations")
-    total = cur.fetchone()[0]
+    if cur.fetchone()[0] == 0:
+        for row in SEED_DENOMINATIONS:
+            cur.execute("""
+            INSERT INTO denominations (
+                universal_id, country, macro_region, sub_region,
+                appellation_name, legal_level, wine_color_scope,
+                alcohol_min, allowed_grapes, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                row["universal_id"],
+                row["country"],
+                row["macro_region"],
+                row["sub_region"],
+                row["appellation_name"],
+                row["legal_level"],
+                row["wine_color_scope"],
+                row["alcohol_min"],
+                row["allowed_grapes"],
+                row["notes"]
+            ))
 
-    if total == 0:
-        from seed_data import SEED_ROWS
-        now = datetime.utcnow().isoformat()
-
-        rows = [row + (now, now) for row in SEED_ROWS]
-
-        cur.executemany("""
-        INSERT OR IGNORE INTO denominations (
-            universal_id,
-            country,
-            macro_region,
-            sub_region,
-            appellation_name,
-            legal_level,
-            wine_color_scope,
-            alcohol_min,
-            alcohol_max,
-            vintage_max,
-            allowed_grapes,
-            notes,
-            created_at,
-            updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, rows)
+    cur.execute("SELECT COUNT(*) FROM wines")
+    if cur.fetchone()[0] == 0:
+        for row in SEED_WINES:
+            cur.execute("""
+            INSERT INTO wines (
+                wine_name, producer, country, macro_region, sub_region,
+                appellation_name, vintage, grapes, style, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                row["wine_name"],
+                row["producer"],
+                row["country"],
+                row["macro_region"],
+                row["sub_region"],
+                row["appellation_name"],
+                row["vintage"],
+                row["grapes"],
+                row["style"],
+                row["notes"]
+            ))
 
     conn.commit()
     conn.close()
 
-
-def get_all_denominations():
+def fetch_all_wines():
     conn = get_conn()
     cur = conn.cursor()
-
     cur.execute("""
-        SELECT
-            universal_id,
-            country,
-            macro_region,
-            sub_region,
-            appellation_name,
-            legal_level,
-            wine_color_scope,
-            alcohol_min,
-            alcohol_max,
-            vintage_max,
-            allowed_grapes,
-            notes
-        FROM denominations
-        ORDER BY country, macro_region, sub_region, appellation_name
+        SELECT wine_name, producer, country, macro_region, sub_region,
+               appellation_name, vintage, grapes, style, notes
+        FROM wines
     """)
-
     rows = cur.fetchall()
     conn.close()
     return rows
 
-
-def get_appellation_by_name(appellation_name):
+def fetch_all_denominations():
     conn = get_conn()
     cur = conn.cursor()
-
     cur.execute("""
-        SELECT
-            universal_id,
-            country,
-            macro_region,
-            sub_region,
-            appellation_name,
-            legal_level,
-            wine_color_scope,
-            alcohol_min,
-            alcohol_max,
-            vintage_max,
-            allowed_grapes,
-            notes
+        SELECT universal_id, country, macro_region, sub_region,
+               appellation_name, legal_level, wine_color_scope,
+               alcohol_min, allowed_grapes, notes
         FROM denominations
-        WHERE appellation_name = ?
-        LIMIT 1
-    """, (appellation_name,))
-
-    row = cur.fetchone()
+    """)
+    rows = cur.fetchall()
     conn.close()
-    return row
+    return rows
