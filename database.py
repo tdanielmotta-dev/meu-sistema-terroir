@@ -84,6 +84,18 @@ def seed_if_empty():
                 14.0,
                 "Exemplo inicial de vinho no banco"
             ),
+            (
+                "Bodega Exemplo",
+                "Rioja Reserva",
+                "2019",
+                "Tempranillo",
+                "Rioja",
+                "Espanha",
+                "Rioja DOCa",
+                "Tinto",
+                13.5,
+                "Exemplo inicial de vinho no banco"
+            ),
         ]
 
         cur.executemany("""
@@ -100,7 +112,7 @@ def seed_if_empty():
                 "Bordeaux",
                 "Bordeaux AOC",
                 "AOC",
-                "Merlot, Cabernet Sauvignon, Cabernet Franc, Sauvignon Blanc, Semillon, Muscadelle",
+                "Merlot, Cabernet Sauvignon, Cabernet Franc",
                 10.5,
                 "Variável conforme subzona e estilo",
                 "Denominação genérica de Bordeaux"
@@ -116,24 +128,14 @@ def seed_if_empty():
                 "Denominação clássica do Piemonte"
             ),
             (
-                "Itália",
-                "Piemonte",
-                "Barbaresco DOCG",
-                "DOCG",
-                "Nebbiolo",
-                12.5,
-                "Maturação obrigatória conforme regra da DOCG",
-                "Denominação clássica do Piemonte"
-            ),
-            (
-                "França",
-                "Bordeaux",
-                "Sauternes AOC",
-                "AOC",
-                "Semillon, Sauvignon Blanc, Muscadelle",
-                12.0,
-                "Vinhos doces botrytizados; regras específicas de produção",
-                "Denominação célebre de vinhos doces de Bordeaux"
+                "Espanha",
+                "Rioja",
+                "Rioja DOCa",
+                "DOCa",
+                "Tempranillo, Garnacha, Graciano, Mazuelo",
+                11.0,
+                "Regras variáveis conforme categoria e estilo",
+                "Denominação clássica da Espanha"
             ),
         ]
 
