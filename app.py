@@ -28,6 +28,7 @@ def render_profile(profile: dict):
     with c2:
         show_value("Uva principal", profile.get("grape"))
         show_value("Teor alcoólico", profile.get("alcohol"))
+        show_value("Álcool mínimo legal da denominação", profile.get("min_alcohol"))
         show_value("Corpo", profile.get("body"))
         show_value("Acidez", profile.get("acidity"))
         show_value("Taninos", profile.get("tannin"))
@@ -90,23 +91,26 @@ def render_web_results(title, results):
 
         extracted = item.get("extracted", {})
         if extracted:
+            st.write(f"**Tipo de parser:** {extracted.get('source_type', 'generic')}")
             st.write("**Campos extraídos desta página:**")
             for k, v in extracted.items():
+                if k == "source_type":
+                    continue
                 st.write(f"- {k}: {v}")
 
         st.divider()
 
 
 def main():
-    st.set_page_config(page_title="WineIndex OMEGA V4", page_icon="🍷", layout="wide")
+    st.set_page_config(page_title="WineIndex OMEGA V5", page_icon="🍷", layout="wide")
 
     init_db()
     seed_if_empty()
 
-    st.title("🍷 WineIndex OMEGA V4 — Internet Parser Real")
+    st.title("🍷 WineIndex OMEGA V5 — Parsers específicos")
     st.write(
         "Digite somente o nome do rótulo. O sistema tenta consolidar dados do banco local, "
-        "knowledge base e páginas online processadas automaticamente."
+        "knowledge base, Vivino, páginas de produtor/importadora e páginas de denominação oficial."
     )
 
     query = st.text_input(
@@ -119,7 +123,7 @@ def main():
             st.warning("Digite um rótulo.")
             return
 
-        with st.spinner("Pesquisando banco + knowledge base + internet + extração de campos..."):
+        with st.spinner("Pesquisando banco + knowledge base + internet + parsers especializados..."):
             report = build_wine_report(query)
 
         render_summary(report.get("summary", []))
