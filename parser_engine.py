@@ -1,108 +1,59 @@
 import re
 
 KNOWN_GRAPES = [
-    "Merlot", "Cabernet Sauvignon", "Cabernet Franc", "Pinot Noir",
-    "Chardonnay", "Sauvignon Blanc", "Syrah", "Shiraz", "Malbec",
-    "Nebbiolo", "Sangiovese", "Tempranillo", "Carmenere", "Carménère",
-    "Tannat", "Grenache", "Garnacha", "Riesling", "Gewurztraminer",
-    "Gewürztraminer", "Viognier", "Pinot Grigio", "Pinot Gris",
-    "Zinfandel", "Primitivo", "Touriga Nacional", "Alvarinho", "Albariño"
+    "cabernet sauvignon", "cabernet franc", "merlot", "malbec", "pinot noir",
+    "syrah", "shiraz", "nebbiolo", "tempranillo", "chardonnay", "sauvignon blanc",
+    "riesling", "gewurztraminer", "carmenere", "sangiovese"
 ]
 
-KNOWN_DENOM_TERMS = [
-    "DOCG", "DOC", "DOP", "IGP", "IGT", "AOC", "AOP", "DO", "DOCa"
+KNOWN_COUNTRIES = [
+    "frança", "italia", "itália", "espanha", "portugal", "argentina", "chile",
+    "brasil", "uruguai", "estados unidos", "australia", "austrália", "alemanha"
 ]
 
-STYLE_TERMS = [
-    "Reserva", "Gran Reserva", "Classico", "Clásico", "Classic",
-    "Rosé", "Rose", "Brut", "Extra Brut", "Demi-Sec", "Sec", "Dry",
-    "Late Harvest", "Botrytis", "Icewine"
+KNOWN_DENOMINATIONS = [
+    "docg", "doc", "aoc", "dop", "igp", "do", "ava", "igt", "premier cru", "grand cru"
 ]
 
 
-def parse_wine_query(query: str) -> dict:
-    query = (query or "").strip()
-    if not query:
-        return {
-            "raw_query": "",
-            "normalized_query": "",
-            "vintage": None,
-            "grapes_found": [],
-            "denom_terms_found": [],
-            "style_terms_found": [],
-            "tokens": [],
-            "producer_guess": None,
-            "wine_name_guess": None
-        }
-
-    cleaned = " ".join(query.split())
-    tokens = cleaned.split()
+def parse_wine_query(query: str):
+    raw = (query or "").strip()
+    normalized = " ".join(raw.split())
+    lower = normalized.lower()
 
     vintage = None
-    m = re.search(r"\b(19\d{2}|20\d{2}|21\d{2})\b", cleaned)
+    m = re.search(r"\b(19\d{2}|20\d{2})\b", lower)
     if m:
         vintage = m.group(1)
 
-    grapes_found = []
-    lower_q = cleaned.lower()
-    for grape in KNOWN_GRAPES:
-        if grape.lower() in lower_q:
-            grapes_found.append(grape)
+    grape = None
+    for g in sorted(KNOWN_GRAPES, key=len, reverse=True):
+        if g in lower:
+            grape = g.title()
+            break
 
-    denom_terms_found = []
-    for term in KNOWN_DENOM_TERMS:
-        if re.search(rf"\b{re.escape(term)}\b", cleaned, flags=re.I):
-            denom_terms_found.append(term)
+    denomination = None
+    for d in sorted(KNOWN_DENOMINATIONS, key=len, reverse=True):
+        if d in lower:
+            denomination = d.upper() if len(d) <= 4 else d.title()
+            break
 
-    style_terms_found = []
-    for term in STYLE_TERMS:
-        if term.lower() in lower_q:
-            style_terms_found.append(term)
+    country = None
+    for c in KNOWN_COUNTRIES:
+        if c in lower:
+            country = c.title()
+            break
 
-    producer_guess = None
-    wine_name_guess = None
-
-    # tentativa simples:
-    # se tiver safra, tudo antes dela vira base do nome
-    base = cleaned
-    if vintage:
-        base = cleaned.replace(vintage, "").strip()
-
-    # remove duplicações de espaço
-    base = " ".join(base.split())
-
-    # se tiver uva conhecida, tenta dividir produtor e nome
-    # ex: Gato Negro Merlot -> produtor=Gato Negro / wine=Merlot
-    producer_guess = base
-    wine_name_guess = base
-
-    if grapes_found:
-        grape = grapes_found[0]
-        idx = base.lower().find(grape.lower())
-        if idx > 0:
-            left = base[:idx].strip()
-            right = base[idx:].strip()
-            if left:
-                producer_guess = left
-            wine_name_guess = right
-        else:
-            wine_name_guess = grape
-
-    # fallback: se tiver 2+ palavras, assume primeira metade como produtor aproximado
-    if not grapes_found and len(tokens) >= 2:
-        producer_guess = " ".join(tokens[:-1]).replace(vintage or "", "").strip()
-        wine_name_guess = cleaned.replace(producer_guess, "", 1).replace(vintage or "", "").strip()
-        if not wine_name_guess:
-            wine_name_guess = cleaned
+    tokens = normalized.split()
 
     return {
-        "raw_query": query,
-        "normalized_query": cleaned,
-        "vintage": vintage,
-        "grapes_found": grapes_found,
-        "denom_terms_found": denom_terms_found,
-        "style_terms_found": style_terms_found,
+        "raw_query": raw,
+        "normalized_query": normalized,
         "tokens": tokens,
-        "producer_guess": producer_guess,
-        "wine_name_guess": wine_name_guess
+        "vintage": vintage,
+        "grape": grape,
+        "country": country,
+        "region": None,
+        "subregion": None,
+        "denomination": denomination
     }
