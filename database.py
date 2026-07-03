@@ -3,6 +3,7 @@ from pathlib import Path
 
 DB_PATH = Path("/tmp/wineindex.db")
 
+
 def get_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -23,6 +24,7 @@ def init_db():
         region TEXT,
         country TEXT,
         denomination TEXT,
+        classification TEXT,
         wine_type TEXT,
         alcohol REAL,
         notes TEXT
@@ -60,36 +62,51 @@ def seed_if_empty():
     if wines_count == 0:
         wines_seed = [
             (
-                "Château Exemplo",
-                "Merlot Reserva",
-                "2020",
-                "Merlot",
+                "Château Margaux",
+                "Pavillon Rouge",
+                "2015",
+                "Cabernet Sauvignon, Merlot, Petit Verdot, Cabernet Franc",
                 "Bordeaux",
                 "França",
-                "Bordeaux AOC",
+                "Margaux",
+                "AOC",
                 "Tinto",
                 13.5,
-                "Exemplo inicial de vinho no banco"
+                "Segundo vinho de Château Margaux; Médoc, margem esquerda."
             ),
             (
-                "Cantina Exemplo",
-                "Barolo Classico",
-                "2018",
+                "Vietti",
+                "Castiglione",
+                "2019",
                 "Nebbiolo",
                 "Piemonte",
                 "Itália",
-                "Barolo DOCG",
+                "Barolo",
+                "DOCG",
                 "Tinto",
                 14.0,
-                "Exemplo inicial de vinho no banco"
-            )
+                "Barolo clássico com blend de vinhedos do produtor."
+            ),
+            (
+                "Miolo",
+                "Lote 43",
+                "2020",
+                "Merlot, Cabernet Sauvignon",
+                "Vale dos Vinhedos",
+                "Brasil",
+                "Vale dos Vinhedos",
+                "D.O.",
+                "Tinto",
+                14.0,
+                "Ícone brasileiro; corte bordalês."
+            ),
         ]
 
         cur.executemany("""
         INSERT INTO wines (
             producer, wine_name, vintage, grape, region, country,
-            denomination, wine_type, alcohol, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            denomination, classification, wine_type, alcohol, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, wines_seed)
 
     if den_count == 0:
@@ -97,23 +114,33 @@ def seed_if_empty():
             (
                 "França",
                 "Bordeaux",
-                "Bordeaux AOC",
+                "Margaux",
                 "AOC",
-                "Merlot, Cabernet Sauvignon, Cabernet Franc",
+                "Cabernet Sauvignon, Merlot, Cabernet Franc, Petit Verdot, Malbec, Carmenère",
                 10.5,
-                "Variável conforme subzona e estilo",
-                "Denominação genérica de Bordeaux"
+                "Regras variam por estilo e pelo caderno da denominação aplicável",
+                "Appellation do Médoc, margem esquerda de Bordeaux."
             ),
             (
                 "Itália",
                 "Piemonte",
-                "Barolo DOCG",
+                "Barolo",
                 "DOCG",
                 "Nebbiolo",
                 13.0,
-                "Maturação obrigatória conforme regra da DOCG",
-                "Denominação clássica do Piemonte"
-            )
+                "Maturação obrigatória conforme disciplinare da DOCG",
+                "Denominação clássica do Piemonte."
+            ),
+            (
+                "Brasil",
+                "Vale dos Vinhedos",
+                "Vale dos Vinhedos",
+                "D.O.",
+                "Conforme regulamento da D.O. e categoria do vinho",
+                None,
+                "Conforme regulamento vigente do conselho regulador",
+                "Denominação de origem brasileira relevante da Serra Gaúcha."
+            ),
         ]
 
         cur.executemany("""
