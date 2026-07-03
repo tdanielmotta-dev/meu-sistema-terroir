@@ -5,7 +5,7 @@ DB_PATH = Path("wineindex.db")
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -44,18 +44,6 @@ def init_db():
     )
     """)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS producers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        producer_name TEXT,
-        country TEXT,
-        region TEXT,
-        subregion TEXT,
-        website TEXT,
-        notes TEXT
-    )
-    """)
-
     conn.commit()
     conn.close()
 
@@ -64,14 +52,11 @@ def seed_if_empty():
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("SELECT COUNT(*) FROM wines")
-    wines_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) AS c FROM wines")
+    wines_count = cur.fetchone()["c"]
 
-    cur.execute("SELECT COUNT(*) FROM denominations")
-    den_count = cur.fetchone()[0]
-
-    cur.execute("SELECT COUNT(*) FROM producers")
-    prod_count = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) AS c FROM denominations")
+    den_count = cur.fetchone()["c"]
 
     if wines_count == 0:
         wines_seed = [
@@ -98,31 +83,7 @@ def seed_if_empty():
                 "Tinto",
                 14.0,
                 "Exemplo inicial de vinho no banco"
-            ),
-            (
-                "Château d'Yquem",
-                "Château d'Yquem",
-                "2015",
-                "Sémillon, Sauvignon Blanc",
-                "Bordeaux",
-                "França",
-                "Sauternes AOC",
-                "Branco doce botrytizado",
-                14.0,
-                "Ícone de Sauternes"
-            ),
-            (
-                "Marchesi di Barolo",
-                "Barolo Tradizione",
-                "2019",
-                "Nebbiolo",
-                "Piemonte",
-                "Itália",
-                "Barolo DOCG",
-                "Tinto",
-                14.0,
-                "Barolo clássico do Piemonte"
-            ),
+            )
         ]
 
         cur.executemany("""
@@ -139,20 +100,10 @@ def seed_if_empty():
                 "Bordeaux",
                 "Bordeaux AOC",
                 "AOC",
-                "Merlot, Cabernet Sauvignon, Cabernet Franc, Sauvignon Blanc, Sémillon, Muscadelle",
+                "Merlot, Cabernet Sauvignon, Cabernet Franc",
                 10.5,
                 "Variável conforme subzona e estilo",
                 "Denominação genérica de Bordeaux"
-            ),
-            (
-                "França",
-                "Bordeaux",
-                "Sauternes AOC",
-                "AOC",
-                "Sémillon, Sauvignon Blanc, Muscadelle",
-                12.0,
-                "Branco doce botrytizado; regras variam conforme caderno oficial",
-                "Denominação clássica de botrytizados de Bordeaux"
             ),
             (
                 "Itália",
@@ -161,19 +112,9 @@ def seed_if_empty():
                 "DOCG",
                 "Nebbiolo",
                 13.0,
-                "Maturação obrigatória conforme disciplinare da DOCG",
+                "Maturação obrigatória conforme regra da DOCG",
                 "Denominação clássica do Piemonte"
-            ),
-            (
-                "Espanha",
-                "Rioja",
-                "Rioja DOCa",
-                "DOCa",
-                "Tempranillo, Garnacha, Graciano, Mazuelo e outras permitidas",
-                11.0,
-                "Regras variam por categoria e tipologia",
-                "Principal denominação espanhola"
-            ),
+            )
         ]
 
         cur.executemany("""
@@ -182,32 +123,6 @@ def seed_if_empty():
             allowed_grapes, min_alcohol, aging_rules, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, den_seed)
-
-    if prod_count == 0:
-        prod_seed = [
-            (
-                "Château d'Yquem",
-                "França",
-                "Bordeaux",
-                "Sauternes",
-                "https://www.yquem.fr",
-                "Produtor ícone de Sauternes"
-            ),
-            (
-                "Marchesi di Barolo",
-                "Itália",
-                "Piemonte",
-                "Barolo",
-                "https://www.marchesidibarolo.com",
-                "Produtor tradicional do Piemonte"
-            ),
-        ]
-
-        cur.executemany("""
-        INSERT INTO producers (
-            producer_name, country, region, subregion, website, notes
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        """, prod_seed)
 
     conn.commit()
     conn.close()
@@ -226,15 +141,6 @@ def fetch_all_denominations():
     conn = get_connection()
     cur = conn.cursor()
     cur.execute("SELECT * FROM denominations ORDER BY country, region, denomination")
-    rows = cur.fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-def fetch_all_producers():
-    conn = get_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT * FROM producers ORDER BY producer_name")
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
