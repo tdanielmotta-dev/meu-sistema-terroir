@@ -3,7 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import quote
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (WineIndex/1.0; +https://streamlit.app)"
+    "User-Agent": "Mozilla/5.0 (WineIndex/2.0; +https://streamlit.app)"
 }
 
 
@@ -17,10 +17,6 @@ def safe_get(url: str, timeout: int = 15):
 
 
 def duckduckgo_search(query: str, max_results: int = 5):
-    """
-    Busca web simples via HTML do DuckDuckGo.
-    Retorna lista de dicts com title/url/snippet.
-    """
     query = (query or "").strip()
     if not query:
         return []
@@ -58,9 +54,6 @@ def duckduckgo_search(query: str, max_results: int = 5):
 
 
 def extract_page_summary(url: str, max_paragraphs: int = 3):
-    """
-    Tenta puxar um resumo bruto da página.
-    """
     resp = safe_get(url, timeout=20)
     if not resp:
         return ""
@@ -73,7 +66,7 @@ def extract_page_summary(url: str, max_paragraphs: int = 3):
     paragraphs = []
     for p in soup.find_all("p"):
         txt = p.get_text(" ", strip=True)
-        if len(txt) >= 60:
+        if len(txt) >= 80:
             paragraphs.append(txt)
         if len(paragraphs) >= max_paragraphs:
             break
@@ -81,38 +74,28 @@ def extract_page_summary(url: str, max_paragraphs: int = 3):
     return "\n\n".join(paragraphs[:max_paragraphs])
 
 
-def search_wine_online(query: str):
-    """
-    Busca web específica do rótulo / vinho.
-    """
-    results = duckduckgo_search(f'"{query}" vinho OR wine OR winery OR domaine OR cantina', max_results=5)
+def enrich_results(results, max_enriched=3):
     enriched = []
-
-    for item in results[:3]:
+    for item in results[:max_enriched]:
         summary = extract_page_summary(item["url"], max_paragraphs=2)
         enriched.append({
             **item,
             "page_summary": summary
         })
-
     return enriched
+
+
+def search_wine_online(query: str):
+    results = duckduckgo_search(
+        f'"{query}" vinho OR wine OR winery OR domaine OR cantina OR tasting notes',
+        max_results=5
+    )
+    return enrich_results(results, max_enriched=3)
 
 
 def search_denomination_online(query: str):
-    """
-    Busca web específica da denominação / legislação / terroir.
-    """
     results = duckduckgo_search(
-        f'"{query}" appellation OR DOCG OR AOC OR DOP OR denominazione OR terroir',
+        f'"{query}" appellation OR DOCG OR DOC OR AOC OR AOP OR DOP OR IGP OR terroir OR disciplinare OR cahier des charges',
         max_results=5
     )
-
-    enriched = []
-    for item in results[:3]:
-        summary = extract_page_summary(item["url"], max_paragraphs=2)
-        enriched.append({
-            **item,
-            "page_summary": summary
-        })
-
-    return enriched
+    return enrich_results(results, max_enriched=3)
