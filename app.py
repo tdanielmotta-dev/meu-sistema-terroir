@@ -2,43 +2,73 @@ import streamlit as st
 from database import init_db, seed_if_empty
 from report_builder import build_wine_report
 
-st.set_page_config(page_title="WineIndex OMEGA V6", page_icon="🍷", layout="wide")
+st.set_page_config(page_title="WINEINDEX OMEGA V7", page_icon="🍷", layout="wide")
 
 
-def render_kv(label, value):
-    if value is None:
+def render_dict_block(title, data):
+    st.subheader(title)
+    if not data:
+        st.write("Nenhum dado.")
         return
-    if isinstance(value, str) and not value.strip():
-        return
-    st.markdown(f"**{label}:** {value}")
+    st.json(data)
 
 
-def render_list(label, values):
-    if not values:
-        return
-    cleaned = [str(v).strip() for v in values if str(v).strip()]
-    if not cleaned:
-        return
-    st.markdown(f"**{label}:** " + " | ".join(cleaned))
+def render_profile(profile: dict, field_sources: dict):
+    st.subheader("🍷 Ficha consolidada do vinho")
+
+    st.markdown(f"**Nome consultado:** {profile.get('query', '')}")
+
+    fields_order = [
+        ("producer", "Produtor"),
+        ("wine_name", "Nome do vinho"),
+        ("vintage", "Safra"),
+        ("grape", "Uva"),
+        ("country", "País"),
+        ("region", "Região"),
+        ("subregion", "Sub-região"),
+        ("denomination", "Denominação"),
+        ("classification", "Classificação"),
+        ("wine_type", "Tipo"),
+        ("alcohol", "Teor alcoólico"),
+        ("aromas", "Aromas"),
+        ("palate", "Paladar"),
+        ("acidity", "Acidez"),
+        ("body", "Corpo"),
+        ("soil", "Solo"),
+        ("climate", "Clima"),
+        ("terroir", "Terroir"),
+        ("aging", "Amadurecimento"),
+        ("pairing", "Harmonização"),
+        ("notes", "Observações"),
+    ]
+
+    for key, label in fields_order:
+        value = str(profile.get(key, "")).strip()
+        if not value:
+            value = "—"
+
+        sources = field_sources.get(key, [])
+        source_text = " | ".join(sources) if sources else "sem fonte atribuída"
+
+        st.markdown(f"**{label}:** {value}")
+        st.caption(f"Fonte(s): {source_text}")
 
 
 def main():
     init_db()
     seed_if_empty()
 
-    st.title("🍷 WINEINDEX OMEGA V6")
-    st.caption("Pesquisa definitiva de rótulos de vinho: banco local + internet + consolidação automática")
+    st.title("🍷 WINEINDEX OMEGA V7")
+    st.write("**Pesquisa definitiva de rótulos de vinho:** banco local + internet + consolidação automática")
+    st.write("""
+Digite somente o nome do rótulo ou o título do vinho, por exemplo:
 
-    st.markdown(
-        """
-Digite **somente o nome do rótulo** ou o título do vinho, por exemplo:
+- Gato Negro Merlot 2020
+- Barolo DOCG 2018
+- Catena Malbec
+- Chablis Premier Cru
 
-- `Gato Negro Merlot 2020`
-- `Barolo DOCG 2018`
-- `Catena Malbec`
-- `Chablis Premier Cru`
-
-O sistema vai tentar levantar:
+O sistema tenta levantar:
 - produtor
 - safra
 - uva
@@ -49,111 +79,68 @@ O sistema vai tentar levantar:
 - solo / clima / terroir
 - amadurecimento / harmonização
 - e outras informações encontradas
-"""
-    )
+""")
 
-    query = st.text_input("🔎 Digite o rótulo / nome do vinho", value="Gato Negro Merlot 2020")
+    query = st.text_input("🔎 Digite o rótulo / nome do vinho", value="Gato Negro Malbec 2019")
 
-    col1, col2 = st.columns([1, 4])
-    with col1:
-        run = st.button("Pesquisar", use_container_width=True)
-
-    if run and query.strip():
-        with st.spinner("Pesquisando banco local, internet e consolidando dados..."):
+    if st.button("Pesquisar"):
+        with st.spinner("Pesquisando banco local, knowledge base e internet..."):
             report = build_wine_report(query)
 
         st.subheader("📌 Resumo consolidado")
-        for line in report.get("summary", []):
-            st.write("•", line)
+        for item in report["summary"]:
+            st.write(f"• {item}")
+
+        render_profile(report["profile"], report["field_sources"])
 
         st.divider()
-
-        final = report.get("final_profile", {})
-
-        st.subheader("🍷 Ficha consolidada do vinho")
-        c1, c2 = st.columns(2)
-
-        with c1:
-            render_kv("Nome consultado", report.get("query"))
-            render_kv("Produtor", final.get("producer"))
-            render_kv("Vinho / Rótulo", final.get("wine_name"))
-            render_kv("Safra", final.get("vintage"))
-            render_kv("País", final.get("country"))
-            render_kv("Região", final.get("region"))
-            render_kv("Sub-região", final.get("subregion"))
-            render_kv("Denominação", final.get("denomination"))
-            render_kv("Classificação", final.get("classification"))
-            render_kv("Tipo", final.get("wine_type"))
-            render_kv("Uva principal", final.get("grape"))
-            render_list("Outras uvas", final.get("other_grapes"))
-            render_kv("Teor alcoólico", final.get("alcohol"))
-
-        with c2:
-            render_kv("Clima", final.get("climate"))
-            render_kv("Solo", final.get("soil"))
-            render_kv("Terroir", final.get("terroir"))
-            render_kv("Acidez", final.get("acidity"))
-            render_kv("Corpo", final.get("body"))
-            render_kv("Taninos", final.get("tannins"))
-            render_kv("Amadurecimento / Barrica", final.get("aging"))
-            render_kv("Aromas", final.get("aromas"))
-            render_kv("Paladar / Sabor", final.get("palate"))
-            render_kv("Harmonização", final.get("pairing"))
-            render_kv("Observações", final.get("notes"))
+        render_dict_block("🧠 Parser da consulta", report["parser"])
 
         st.divider()
-
-        st.subheader("🧠 Parser da consulta")
-        st.json(report.get("parsed_query", {}), expanded=True)
-
         st.subheader("🗄️ Resultado do banco local")
-        local_wine = report.get("wine_found")
-        local_denom = report.get("denomination_found")
-
-        if local_wine:
-            st.markdown("### Vinho encontrado no banco")
-            st.json(local_wine, expanded=False)
+        if report["wine_found"]:
+            st.write("**Vinho encontrado no banco local:**")
+            st.json(report["wine_found"])
         else:
-            st.info("Nenhum vinho correspondente encontrado no banco local.")
+            st.write("Nenhum vinho correspondente encontrado no banco local.")
 
-        if local_denom:
-            st.markdown("### Denominação encontrada no banco")
-            st.json(local_denom, expanded=False)
+        if report["denomination_found"]:
+            st.write("**Denominação encontrada no banco local:**")
+            st.json(report["denomination_found"])
         else:
-            st.info("Nenhuma denominação correspondente encontrada no banco local.")
+            st.write("Nenhuma denominação correspondente encontrada no banco local.")
 
         st.divider()
+        st.subheader("🧠 Knowledge base")
+        if report["knowledge_matches"]:
+            for idx, kb in enumerate(report["knowledge_matches"], start=1):
+                st.markdown(f"**Match {idx}**")
+                st.json(kb)
+        else:
+            st.write("Nenhuma correspondência encontrada na knowledge base.")
 
+        st.divider()
         st.subheader("🌐 Fontes online encontradas")
-        online = report.get("online_sources", [])
-        if not online:
-            st.warning("Nenhuma fonte online relevante foi consolidada.")
+        if report["online_sources"]:
+            for idx, src in enumerate(report["online_sources"], start=1):
+                st.markdown(f"### Fonte {idx}")
+                st.write(f"**Título:** {src.get('title', '')}")
+                st.write(f"**URL:** {src.get('url', '')}")
+                if src.get("snippet"):
+                    st.write(f"**Snippet:** {src.get('snippet')}")
         else:
-            for idx, item in enumerate(online, start=1):
-                title = item.get("title", f"Fonte {idx}")
-                url = item.get("url", "")
-                snippet = item.get("snippet", "")
-                page_summary = item.get("page_summary", "")
-                extracted = item.get("extracted", {})
-
-                with st.expander(f"{idx}. {title}", expanded=False):
-                    if url:
-                        st.write(url)
-                    if snippet:
-                        st.markdown("**Snippet**")
-                        st.write(snippet)
-                    if page_summary:
-                        st.markdown("**Resumo bruto da página**")
-                        st.write(page_summary)
-
-                    if extracted:
-                        st.markdown("**Campos extraídos desta fonte**")
-                        st.json(extracted, expanded=False)
+            st.write("Nenhuma fonte online relevante foi consolidada.")
 
         st.divider()
-
-        st.subheader("🧩 Consolidação técnica bruta")
-        st.json(report, expanded=False)
+        st.subheader("🧪 Extração por fonte")
+        if report["parsed_sources"]:
+            for idx, ps in enumerate(report["parsed_sources"], start=1):
+                st.markdown(f"### Parser da fonte {idx}")
+                st.write(f"**Título:** {ps.get('source_title', '')}")
+                st.write(f"**URL:** {ps.get('source_url', '')}")
+                st.json(ps.get("extracted", {}))
+        else:
+            st.write("Nenhuma fonte foi parseada.")
 
 
 if __name__ == "__main__":
