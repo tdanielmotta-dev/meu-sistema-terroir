@@ -5,9 +5,7 @@ DB_PATH = Path("wineindex.db")
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return sqlite3.connect(DB_PATH)
 
 
 def init_db():
@@ -25,18 +23,16 @@ def init_db():
         subregion TEXT,
         country TEXT,
         denomination TEXT,
-        classification TEXT,
         wine_type TEXT,
         alcohol REAL,
-        climate TEXT,
-        soil TEXT,
-        terroir TEXT,
-        acidity TEXT,
-        body TEXT,
-        tannins TEXT,
-        aging TEXT,
         aromas TEXT,
         palate TEXT,
+        acidity TEXT,
+        body TEXT,
+        soil TEXT,
+        climate TEXT,
+        terroir TEXT,
+        aging TEXT,
         pairing TEXT,
         notes TEXT
     )
@@ -53,8 +49,8 @@ def init_db():
         allowed_grapes TEXT,
         min_alcohol REAL,
         aging_rules TEXT,
-        climate TEXT,
         soil TEXT,
+        climate TEXT,
         terroir TEXT,
         notes TEXT
     )
@@ -77,28 +73,70 @@ def seed_if_empty():
     if wines_count == 0:
         wines_seed = [
             (
+                "Gato Negro",
+                "Malbec",
+                "2019",
+                "Malbec",
+                "Central Valley",
+                "",
+                "Chile",
+                "",
+                "Tinto",
+                13.0,
+                "frutas vermelhas, ameixa",
+                "frutado, macio, médio corpo",
+                "média",
+                "médio",
+                "",
+                "mediterrâneo",
+                "",
+                "",
+                "",
+                "Seed inicial"
+            ),
+            (
+                "Catena",
+                "Malbec",
+                "",
+                "Malbec",
+                "Mendoza",
+                "",
+                "Argentina",
+                "",
+                "Tinto",
+                13.5,
+                "violeta, ameixa, frutas negras",
+                "estruturado, taninos macios",
+                "média",
+                "médio a encorpado",
+                "aluvial",
+                "continental seco",
+                "altitude andina",
+                "",
+                "",
+                "Seed inicial"
+            ),
+            (
                 "Château Exemplo",
                 "Merlot Reserva",
                 "2020",
                 "Merlot",
                 "Bordeaux",
-                "Médoc",
+                "",
                 "França",
                 "Bordeaux AOC",
-                "AOC",
                 "Tinto",
                 13.5,
-                "Marítimo temperado",
-                "Argilo-calcário com cascalho",
-                "Margem esquerda de Bordeaux com influência atlântica",
-                "Média",
-                "Médio",
-                "Médios",
-                "Barrica parcial",
-                "frutas negras, ameixa, cassis, baunilha",
-                "frutado, médio corpo, final equilibrado",
-                "carnes, queijos curados",
-                "Exemplo inicial de vinho no banco"
+                "frutas vermelhas, especiarias",
+                "macio, frutado",
+                "média",
+                "médio",
+                "argilo-calcário",
+                "oceânico",
+                "margem esquerda/direita de Bordeaux",
+                "",
+                "",
+                "Seed inicial"
             ),
             (
                 "Cantina Exemplo",
@@ -109,30 +147,27 @@ def seed_if_empty():
                 "Barolo",
                 "Itália",
                 "Barolo DOCG",
-                "DOCG",
                 "Tinto",
                 14.0,
-                "Continental",
-                "Marga calcária",
-                "Encostas do Piemonte com forte expressão de nebbiolo",
-                "Alta",
-                "Encorpado",
-                "Altos",
-                "Longo amadurecimento obrigatório",
-                "rosa, alcatrão, cereja, especiarias",
-                "taninos firmes, alta persistência",
-                "caça, carnes braseadas, trufas",
-                "Exemplo inicial de vinho no banco"
+                "rosa, alcatrão, cereja",
+                "estruturado, tânico, longo",
+                "alta",
+                "encorpado",
+                "calcário-margoso",
+                "continental",
+                "colinas de Langhe",
+                "envelhecimento prolongado",
+                "",
+                "Seed inicial"
             ),
         ]
 
         cur.executemany("""
         INSERT INTO wines (
             producer, wine_name, vintage, grape, region, subregion, country,
-            denomination, classification, wine_type, alcohol,
-            climate, soil, terroir, acidity, body, tannins, aging,
-            aromas, palate, pairing, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            denomination, wine_type, alcohol, aromas, palate, acidity, body,
+            soil, climate, terroir, aging, pairing, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, wines_seed)
 
     if den_count == 0:
@@ -140,15 +175,15 @@ def seed_if_empty():
             (
                 "França",
                 "Bordeaux",
-                "Médoc",
+                "",
                 "Bordeaux AOC",
                 "AOC",
                 "Merlot, Cabernet Sauvignon, Cabernet Franc",
                 10.5,
                 "Variável conforme subzona e estilo",
-                "Marítimo",
-                "Cascalho, argila, calcário",
-                "Atlântico, rios e mosaico de solos",
+                "argilo-calcário, cascalho",
+                "oceânico",
+                "margens do Gironde",
                 "Denominação genérica de Bordeaux"
             ),
             (
@@ -160,17 +195,31 @@ def seed_if_empty():
                 "Nebbiolo",
                 13.0,
                 "Maturação obrigatória conforme regra da DOCG",
-                "Continental",
-                "Marga calcária",
-                "Colinas do Langhe",
+                "calcário, marga",
+                "continental",
+                "Langhe",
                 "Denominação clássica do Piemonte"
+            ),
+            (
+                "Chile",
+                "Central Valley",
+                "",
+                "",
+                "",
+                "Cabernet Sauvignon, Merlot, Malbec, Carmenere, Syrah",
+                None,
+                "",
+                "",
+                "mediterrâneo",
+                "",
+                "Região-base de seed"
             ),
         ]
 
         cur.executemany("""
         INSERT INTO denominations (
             country, region, subregion, denomination, classification,
-            allowed_grapes, min_alcohol, aging_rules, climate, soil, terroir, notes
+            allowed_grapes, min_alcohol, aging_rules, soil, climate, terroir, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, den_seed)
 
@@ -180,6 +229,7 @@ def seed_if_empty():
 
 def fetch_all_wines():
     conn = get_connection()
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM wines ORDER BY producer, wine_name")
     rows = cur.fetchall()
@@ -189,73 +239,9 @@ def fetch_all_wines():
 
 def fetch_all_denominations():
     conn = get_connection()
+    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute("SELECT * FROM denominations ORDER BY country, region, denomination")
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
-
-
-def save_online_result_to_db(final_profile: dict):
-    """
-    Salva resultado consolidado no banco se tiver informação mínima útil.
-    """
-    if not final_profile:
-        return
-
-    producer = final_profile.get("producer", "") or ""
-    wine_name = final_profile.get("wine_name", "") or ""
-    denomination = final_profile.get("denomination", "") or ""
-
-    # Só salva se pelo menos um núcleo estiver preenchido
-    if not any([producer.strip(), wine_name.strip(), denomination.strip()]):
-        return
-
-    conn = get_connection()
-    cur = conn.cursor()
-
-    cur.execute("""
-    INSERT INTO wines (
-        producer, wine_name, vintage, grape, region, subregion, country,
-        denomination, classification, wine_type, alcohol,
-        climate, soil, terroir, acidity, body, tannins, aging,
-        aromas, palate, pairing, notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        final_profile.get("producer"),
-        final_profile.get("wine_name"),
-        final_profile.get("vintage"),
-        final_profile.get("grape"),
-        final_profile.get("region"),
-        final_profile.get("subregion"),
-        final_profile.get("country"),
-        final_profile.get("denomination"),
-        final_profile.get("classification"),
-        final_profile.get("wine_type"),
-        _to_float(final_profile.get("alcohol")),
-        final_profile.get("climate"),
-        final_profile.get("soil"),
-        final_profile.get("terroir"),
-        final_profile.get("acidity"),
-        final_profile.get("body"),
-        final_profile.get("tannins"),
-        final_profile.get("aging"),
-        final_profile.get("aromas"),
-        final_profile.get("palate"),
-        final_profile.get("pairing"),
-        final_profile.get("notes"),
-    ))
-
-    conn.commit()
-    conn.close()
-
-
-def _to_float(value):
-    if value is None:
-        return None
-    try:
-        if isinstance(value, str):
-            value = value.replace("%", "").replace(",", ".").strip()
-        return float(value)
-    except Exception:
-        return None
