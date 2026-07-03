@@ -2,174 +2,140 @@ import streamlit as st
 from database import init_db, seed_if_empty
 from report_builder import build_wine_report
 
-st.set_page_config(page_title="WineIndex OMEGA V2", page_icon="🍷", layout="wide")
+st.set_page_config(page_title="WineIndex OMEGA V3", page_icon="🍷", layout="wide")
 
 
-def bootstrap_database():
-    init_db()
-    seed_if_empty()
+def render_local_wine(wine):
+    st.subheader("🍷 Vinho localizado no banco local")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.write(f"**Produtor:** {wine.get('producer', '-')}")
+        st.write(f"**Vinho:** {wine.get('wine_name', '-')}")
+        st.write(f"**Safra:** {wine.get('vintage', '-')}")
+        st.write(f"**Uva:** {wine.get('grape', '-')}")
+        st.write(f"**Tipo:** {wine.get('wine_type', '-')}")
+
+    with col2:
+        st.write(f"**Região:** {wine.get('region', '-')}")
+        st.write(f"**País:** {wine.get('country', '-')}")
+        st.write(f"**Denominação:** {wine.get('denomination', '-')}")
+        st.write(f"**Álcool:** {wine.get('alcohol', '-')}")
+        st.write(f"**Score de correspondência:** {wine.get('_score', '-')}")
 
 
-def render_parser(parsed: dict):
-    conf = parsed.get("confidence", {})
+def render_local_denomination(den):
+    st.subheader("🏛️ Denominação localizada no banco local")
+    col1, col2 = st.columns(2)
 
-    st.subheader("🧠 Parser inteligente")
-    st.write(f"**Consulta bruta:** {parsed.get('raw_query', '-')}")
-    st.write(f"**Produtor provável:** {parsed.get('producer_guess', '-')}")
-    st.write(f"**Nome provável do vinho:** {parsed.get('wine_name_guess', '-')}")
-    st.write(f"**Safra detectada:** {parsed.get('year', '-')}")
-    st.write(f"**País provável:** {parsed.get('country_guess', '-')}")
-    st.write(f"**Regiões detectadas:** {', '.join(parsed.get('regions_detected', [])) or '-'}")
-    st.write(f"**Classificações detectadas:** {', '.join(parsed.get('classifications', [])) or '-'}")
-    st.write(f"**Termos de qualidade:** {', '.join(parsed.get('quality_terms', [])) or '-'}")
-    st.write(f"**Uvas detectadas:** {', '.join(parsed.get('grapes_detected', [])) or '-'}")
-    st.write(f"**Estilos prováveis:** {', '.join(parsed.get('styles_detected', [])) or '-'}")
+    with col1:
+        st.write(f"**Denominação:** {den.get('denomination', '-')}")
+        st.write(f"**Classificação:** {den.get('classification', '-')}")
+        st.write(f"**Região:** {den.get('region', '-')}")
+        st.write(f"**País:** {den.get('country', '-')}")
 
-    st.markdown("### 🎯 Confiança por campo")
-    st.write(f"- **Produtor:** {conf.get('producer', 0.0):.2f}")
-    st.write(f"- **Nome do vinho:** {conf.get('wine_name', 0.0):.2f}")
-    st.write(f"- **Safra:** {conf.get('year', 0.0):.2f}")
-    st.write(f"- **País:** {conf.get('country', 0.0):.2f}")
-    st.write(f"- **Regiões:** {conf.get('regions', 0.0):.2f}")
-    st.write(f"- **Classificações:** {conf.get('classifications', 0.0):.2f}")
-    st.write(f"- **Termos de qualidade:** {conf.get('quality_terms', 0.0):.2f}")
-    st.write(f"- **Uvas:** {conf.get('grapes', 0.0):.2f}")
-    st.write(f"- **Estilos:** {conf.get('styles', 0.0):.2f}")
+    with col2:
+        st.write(f"**Uvas permitidas:** {den.get('allowed_grapes', '-')}")
+        st.write(f"**Álcool mínimo:** {den.get('min_alcohol', '-')}")
+        st.write(f"**Regras de maturação:** {den.get('aging_rules', '-')}")
+        st.write(f"**Score de correspondência:** {den.get('_score', '-')}")
 
 
-def render_consolidated_card(card: dict):
-    st.subheader("📌 Ficha consolidada")
-    st.write(f"**Produtor:** {card.get('producer') or '-'}")
-    st.write(f"**Vinho / Cuvée:** {card.get('wine_name') or '-'}")
-    st.write(f"**Safra:** {card.get('vintage') or '-'}")
-    st.write(f"**País:** {card.get('country') or '-'}")
-    st.write(f"**Região:** {card.get('region') or '-'}")
-    st.write(f"**Denominação:** {card.get('denomination') or '-'}")
-    st.write(f"**Classificação:** {card.get('classification') or '-'}")
-    st.write(f"**Tipo / estilo consolidado:** {card.get('wine_type') or ', '.join(card.get('styles_detected', [])) or '-'}")
+def render_kb_match(match):
+    st.subheader(f"🧠 Knowledge Base — {match.get('denomination', match.get('key', 'Região'))}")
+    col1, col2 = st.columns(2)
 
-    grapes = card.get("grapes", [])
-    if grapes:
-        st.write(f"**Uvas relacionadas:** {', '.join(grapes)}")
-    else:
-        st.write("**Uvas relacionadas:** -")
+    with col1:
+        st.write(f"**País:** {match.get('country', '-')}")
+        st.write(f"**Região:** {match.get('region', '-')}")
+        st.write(f"**Denominação:** {match.get('denomination', '-')}")
+        st.write(f"**Classificação:** {match.get('classification', '-')}")
+        st.write(f"**Castas:** {', '.join(match.get('grapes', [])) if match.get('grapes') else '-'}")
+        st.write(f"**Álcool mínimo:** {match.get('min_alcohol', '-')}")
 
-    q = card.get("quality_terms", [])
-    if q:
-        st.write(f"**Termos de qualidade detectados:** {', '.join(q)}")
-    else:
-        st.write("**Termos de qualidade detectados:** -")
+    with col2:
+        st.write(f"**Clima:** {match.get('climate', '-')}")
+        st.write(f"**Terroir:** {match.get('terroir', '-')}")
+        st.write(f"**Estilo:** {match.get('style', '-')}")
+        st.write(f"**Aromas típicos:** {', '.join(match.get('aromas', [])) if match.get('aromas') else '-'}")
+        st.write(f"**Regras de envelhecimento:** {match.get('aging_rules', '-')}")
+        st.write(f"**Notas:** {match.get('notes', '-')}")
 
 
-def render_local_wine(wine: dict):
-    st.subheader("🍷 Banco local — vinho")
-    st.write(f"**Produtor:** {wine.get('producer', '-')}")
-    st.write(f"**Rótulo:** {wine.get('wine_name', '-')}")
-    st.write(f"**Safra:** {wine.get('vintage', '-')}")
-    st.write(f"**Uva(s):** {wine.get('grape', '-')}")
-    st.write(f"**Região:** {wine.get('region', '-')}")
-    st.write(f"**País:** {wine.get('country', '-')}")
-    st.write(f"**Denominação:** {wine.get('denomination', '-')}")
-    st.write(f"**Classificação:** {wine.get('classification', '-')}")
-    st.write(f"**Tipo:** {wine.get('wine_type', '-')}")
-    st.write(f"**Álcool:** {wine.get('alcohol', '-')}")
-    st.write(f"**Notas:** {wine.get('notes', '-')}")
-    st.write(f"**Score local:** {wine.get('_score', '-')}")
-
-
-def render_local_denomination(den: dict):
-    st.subheader("🏛️ Banco local — denominação")
-    st.write(f"**País:** {den.get('country', '-')}")
-    st.write(f"**Região:** {den.get('region', '-')}")
-    st.write(f"**Denominação:** {den.get('denomination', '-')}")
-    st.write(f"**Classificação:** {den.get('classification', '-')}")
-    st.write(f"**Uvas permitidas:** {den.get('allowed_grapes', '-')}")
-    st.write(f"**Álcool mínimo:** {den.get('min_alcohol', '-')}")
-    st.write(f"**Regras de amadurecimento:** {den.get('aging_rules', '-')}")
-    st.write(f"**Notas:** {den.get('notes', '-')}")
-    st.write(f"**Score local:** {den.get('_score', '-')}")
-
-
-def render_online_results(title: str, items: list):
+def render_online_results(results, title):
     st.subheader(title)
-    if not items:
-        st.info("Nenhum resultado online.")
+    if not results:
+        st.info("Nenhum resultado encontrado.")
         return
 
-    for idx, item in enumerate(items, start=1):
-        st.markdown(f"### {idx}. {item.get('title', 'Sem título')}")
-        if item.get("url"):
-            st.write(item["url"])
+    for i, item in enumerate(results, start=1):
+        st.markdown(f"### {i}. {item.get('title', 'Sem título')}")
+        st.write(f"**URL:** {item.get('url', '-')}")
         if item.get("snippet"):
             st.write(f"**Snippet:** {item['snippet']}")
         if item.get("page_summary"):
-            st.write(f"**Resumo da página:** {item['page_summary']}")
-        st.markdown("---")
+            st.write("**Resumo da página:**")
+            st.write(item["page_summary"])
+        st.divider()
 
 
 def main():
-    bootstrap_database()
+    init_db()
+    seed_if_empty()
 
-    st.title("🍷 WineIndex OMEGA V2")
-    st.write("Pesquisa híbrida de vinhos, rótulos, produtores, denominações e terroirs.")
-
-    query = st.text_input(
-        "Digite o rótulo / produtor / safra / denominação / região",
-        placeholder="Ex.: Château Margaux 2015 Bordeaux | Barolo DOCG Vietti Castiglione 2019 | Miolo Lote 43 Vale dos Vinhedos"
+    st.title("🍷 WineIndex OMEGA V3 — Pesquisador Definitivo de Rótulos")
+    st.write(
+        "Digite o texto do rótulo, nome do vinho, produtor, denominação ou uma combinação deles. "
+        "O sistema cruza **banco local + parser inteligente + knowledge base + internet**."
     )
 
-    if st.button("Pesquisar"):
-        if not query.strip():
-            st.warning("Digite uma consulta.")
-            return
+    query = st.text_area(
+        "Digite o rótulo / nome do vinho / denominação",
+        height=150,
+        placeholder="Ex.: Barolo DOCG 2018 Poderi XYZ Nebbiolo Italia"
+    )
 
-        with st.spinner("Executando parser inteligente, busca local e busca online..."):
+    if st.button("🔍 Pesquisar rótulo", type="primary"):
+        if not query.strip():
+            st.warning("Digite alguma informação do rótulo.")
+            st.stop()
+
+        with st.spinner("Analisando rótulo, consultando banco local, knowledge base e internet..."):
             report = build_wine_report(query)
 
-        st.header("📋 Resumo geral")
-        for line in report.get("summary", []):
+        st.success("Pesquisa concluída.")
+
+        st.header("1) Resumo Executivo")
+        for line in report["summary"]:
             st.write(f"- {line}")
 
-        st.markdown("---")
-        col_a, col_b = st.columns([1, 1])
+        st.header("2) Parser do rótulo")
+        parsed = report["parsed"]
+        st.json(parsed)
 
-        with col_a:
-            render_parser(report.get("parsed", {}))
+        st.header("3) Banco local")
+        if report["wine_found"]:
+            render_local_wine(report["wine_found"])
+        else:
+            st.info("Nenhum vinho correspondente localizado no banco local.")
 
-        with col_b:
-            render_consolidated_card(report.get("consolidated", {}))
+        if report["denomination_found"]:
+            render_local_denomination(report["denomination_found"])
+        else:
+            st.info("Nenhuma denominação correspondente localizada no banco local.")
 
-        st.markdown("---")
-        col1, col2 = st.columns(2)
+        st.header("4) Knowledge Base")
+        if report["knowledge_matches"]:
+            for match in report["knowledge_matches"]:
+                render_kb_match(match)
+        else:
+            st.info("Nenhuma entrada relevante encontrada na knowledge base.")
 
-        with col1:
-            wine_local = report.get("wine", {}).get("local")
-            if wine_local:
-                render_local_wine(wine_local)
-            else:
-                st.info("Nenhum vinho encontrado no banco local.")
+        st.header("5) Pesquisa online do vinho / rótulo")
+        render_online_results(report["online_wine_results"], "Resultados online do vinho")
 
-        with col2:
-            den_local = report.get("denomination", {}).get("local")
-            if den_local:
-                render_local_denomination(den_local)
-            else:
-                st.info("Nenhuma denominação encontrada no banco local.")
-
-        st.markdown("---")
-        col3, col4 = st.columns(2)
-
-        with col3:
-            render_online_results(
-                "🌐 Online — vinho / produtor / rótulo",
-                report.get("wine", {}).get("online", [])
-            )
-
-        with col4:
-            render_online_results(
-                "🌍 Online — denominação / terroir / legislação",
-                report.get("denomination", {}).get("online", [])
-            )
+        st.header("6) Pesquisa online da denominação / terroir / legislação")
+        render_online_results(report["online_denomination_results"], "Resultados online da denominação")
 
 
 if __name__ == "__main__":
