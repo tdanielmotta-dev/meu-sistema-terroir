@@ -43,9 +43,15 @@ def render_profile(profile: dict):
 
     notes = profile.get("notes", [])
     if notes:
-        st.markdown("### Observações consolidadas")
+        st.markdown("### Observações / trilha de fontes")
         for n in notes:
             st.write(f"- {n}")
+
+    sources_used = profile.get("sources_used", [])
+    if sources_used:
+        st.markdown("### Mapa de preenchimento dos campos")
+        for s in sources_used:
+            st.write(f"- {s}")
 
 
 def render_summary(summary):
@@ -72,7 +78,7 @@ def render_web_results(title, results):
     st.subheader(title)
 
     if not results:
-        st.info("Nenhum resultado online útil encontrado.")
+        st.info("Nenhuma página online útil foi processada.")
         return
 
     for i, item in enumerate(results, start=1):
@@ -81,22 +87,26 @@ def render_web_results(title, results):
             st.write(item["url"])
         if item.get("snippet"):
             st.write(f"**Snippet:** {item['snippet']}")
-        if item.get("page_summary"):
-            st.write("**Resumo bruto da página:**")
-            st.write(item["page_summary"])
+
+        extracted = item.get("extracted", {})
+        if extracted:
+            st.write("**Campos extraídos desta página:**")
+            for k, v in extracted.items():
+                st.write(f"- {k}: {v}")
+
         st.divider()
 
 
 def main():
-    st.set_page_config(page_title="WineIndex OMEGA", page_icon="🍷", layout="wide")
+    st.set_page_config(page_title="WineIndex OMEGA V4", page_icon="🍷", layout="wide")
 
     init_db()
     seed_if_empty()
 
-    st.title("🍷 WineIndex OMEGA")
+    st.title("🍷 WineIndex OMEGA V4 — Internet Parser Real")
     st.write(
-        "Digite somente o nome do rótulo do vinho e o sistema tentará consolidar "
-        "informações de vinho, produtor, região, denominação, terroir e perfil sensorial."
+        "Digite somente o nome do rótulo. O sistema tenta consolidar dados do banco local, "
+        "knowledge base e páginas online processadas automaticamente."
     )
 
     query = st.text_input(
@@ -109,7 +119,7 @@ def main():
             st.warning("Digite um rótulo.")
             return
 
-        with st.spinner("Pesquisando banco local + internet + base técnica..."):
+        with st.spinner("Pesquisando banco + knowledge base + internet + extração de campos..."):
             report = build_wine_report(query)
 
         render_summary(report.get("summary", []))
@@ -117,8 +127,8 @@ def main():
         render_parser(report.get("parsed_query", {}))
 
         web = report.get("web", {})
-        render_web_results("🌐 Resultados online — rótulo / vinho / produtor", web.get("wine_results", []))
-        render_web_results("🌐 Resultados online — região / denominação / terroir", web.get("denomination_results", []))
+        render_web_results("🌐 Páginas processadas — rótulo / vinho / produtor", web.get("wine_results", []))
+        render_web_results("🌐 Páginas processadas — região / denominação / terroir", web.get("denomination_results", []))
 
 
 if __name__ == "__main__":
