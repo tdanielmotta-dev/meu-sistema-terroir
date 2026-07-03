@@ -1,75 +1,112 @@
 import re
 
-KNOWN_GRAPES = [
-    "cabernet sauvignon", "merlot", "pinot noir", "chardonnay", "syrah",
-    "shiraz", "malbec", "nebbiolo", "sangiovese", "tempranillo",
-    "sauvignon blanc", "semillon", "muscadelle", "riesling",
-    "gewurztraminer", "grenache", "garnacha", "touriga nacional",
-    "cabernet franc", "carmenere", "zinfandel", "primitivo", "barbera"
-]
 
-KNOWN_DENOMINATIONS = [
-    "barolo", "barbaresco", "bordeaux", "medoc", "haut-medoc",
-    "pauillac", "margaux", "saint-estephe", "saint-julien",
-    "pomerol", "saint-emilion", "sauternes", "barsac", "graves",
-    "rioja", "chianti", "chianti classico", "brunello di montalcino",
-    "amarone", "valpolicella", "bourgogne", "chablis", "champagne"
+KNOWN_GRAPES = [
+    "cabernet sauvignon",
+    "cabernet franc",
+    "merlot",
+    "pinot noir",
+    "chardonnay",
+    "sauvignon blanc",
+    "riesling",
+    "syrah",
+    "shiraz",
+    "malbec",
+    "nebbiolo",
+    "sangiovese",
+    "tempranillo",
+    "grenache",
+    "garnacha",
+    "mourvedre",
+    "monastrell",
+    "carignan",
+    "carmenere",
+    "touriga nacional",
+    "chenin blanc",
+    "gewurztraminer",
+    "viognier",
+    "albarino",
+    "albariño",
+    "semillon",
+    "sémillon",
+    "petit verdot",
+    "zinfandel",
+    "barbera",
+    "dolcetto"
 ]
 
 KNOWN_COUNTRIES = [
-    "frança", "france", "itália", "italy", "espanha", "spain",
-    "portugal", "argentina", "chile", "brasil", "austrália", "australia",
-    "eua", "usa", "estados unidos", "alemanha", "germany"
+    "frança", "france", "itália", "italia", "espanha", "spain", "portugal",
+    "argentina", "chile", "brasil", "alemanha", "germany", "austrália",
+    "australia", "eua", "usa", "estados unidos", "nova zelândia",
+    "new zealand", "áfrica do sul", "south africa"
 ]
 
-STYLE_TERMS = [
-    "reserva", "gran reserva", "classico", "superiore", "riserva",
-    "brut", "extra brut", "demi-sec", "sec", "doce", "botrytized",
-    "late harvest", "icewine", "rosso", "bianco", "blanc", "rouge"
+KNOWN_REGIONS = [
+    "bordeaux", "medoc", "médoc", "pauillac", "margaux", "saint-estephe",
+    "saint-estèphe", "saint-julien", "pomerol", "saint-emilion",
+    "saint-émilion", "sauternes", "barsac", "graves", "bourgogne",
+    "burgundy", "chablis", "côte de nuits", "cote de nuits",
+    "côte de beaune", "cote de beaune", "champagne", "alsace", "loire",
+    "rhône", "rhone", "barolo", "barbaresco", "piemonte", "piedmont",
+    "toscana", "tuscany", "chianti", "montalcino", "montepulciano",
+    "rioja", "rioja alta", "rioja alavesa", "ribera del duero", "priorat",
+    "rueda", "jerez", "douro", "dão", "dao", "vinho verde", "alentejo",
+    "mendoza", "maipo", "colchagua", "vale do casablanca", "mosel",
+    "rheingau", "napa valley", "sonoma", "mclaren vale", "barossa",
+    "marlborough", "stellenbosch", "mantiqueira"
+]
+
+KNOWN_DENOMINATIONS = [
+    "aoc", "aop", "doc", "docg", "igp", "dop", "igt", "vin de france",
+    "bordeaux aoc", "pauillac aoc", "margaux aoc", "saint-emilion grand cru",
+    "barolo docg", "barbaresco docg", "chianti classico docg",
+    "brunello di montalcino docg", "rioja doca", "ribera del duero do",
+    "douro doc", "vinho verde doc"
 ]
 
 
-def normalize(text: str) -> str:
-    return (text or "").strip().lower()
+def normalize_text(text: str) -> str:
+    text = (text or "").strip()
+    text = re.sub(r"\s+", " ", text)
+    return text
 
 
-def parse_label_text(label_text: str):
-    text = normalize(label_text)
+def extract_vintage(text: str):
+    years = re.findall(r"\b(19\d{2}|20\d{2})\b", text)
+    if years:
+        return years[0]
+    return None
 
-    vintage = None
-    vintages = re.findall(r"\b(19\d{2}|20\d{2})\b", text)
-    if vintages:
-        vintage = vintages[0]
 
-    grapes = []
-    for g in KNOWN_GRAPES:
-        if g in text:
-            grapes.append(g.title())
+def find_first_match(text: str, candidates: list):
+    text_lower = text.lower()
+    for item in candidates:
+        if item.lower() in text_lower:
+            return item
+    return None
 
-    denominations = []
-    for d in KNOWN_DENOMINATIONS:
-        if d in text:
-            denominations.append(d.title())
 
-    countries = []
-    for c in KNOWN_COUNTRIES:
-        if c in text:
-            countries.append(c.title())
+def tokenize_query(text: str):
+    return re.findall(r"[a-zA-ZÀ-ÿ0-9\-']+", text.lower())
 
-    styles = []
-    for s in STYLE_TERMS:
-        if s in text:
-            styles.append(s.title())
 
-    tokens = [t for t in re.split(r"[^a-zA-ZÀ-ÿ0-9]+", label_text) if t.strip()]
-    probable_name = " ".join(tokens[:8]).strip()
+def parse_wine_query(query: str):
+    normalized = normalize_text(query)
+    vintage = extract_vintage(normalized)
+    grape = find_first_match(normalized, KNOWN_GRAPES)
+    country = find_first_match(normalized, KNOWN_COUNTRIES)
+    region = find_first_match(normalized, KNOWN_REGIONS)
+    denomination = find_first_match(normalized, KNOWN_DENOMINATIONS)
+    tokens = tokenize_query(normalized)
 
     return {
-        "raw_label": label_text,
-        "probable_name": probable_name,
+        "original_query": query,
+        "normalized_query": normalized,
         "vintage": vintage,
-        "grapes_detected": grapes,
-        "denominations_detected": denominations,
-        "countries_detected": countries,
-        "style_terms": styles
+        "grape": grape,
+        "country": country,
+        "region": region,
+        "denomination": denomination,
+        "tokens": tokens
     }
