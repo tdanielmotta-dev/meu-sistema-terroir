@@ -1,136 +1,98 @@
-from difflib import SequenceMatcher
-
-KNOWLEDGE_BASE = {
-    "gato_negro_merlot": {
-        "aliases": [
-            "Gato Negro Merlot",
-            "Gato Negro Merlot 2020",
-            "Gato Negro",
-        ],
-        "producer": "Viña San Pedro",
+KNOWLEDGE_BASE = [
+    {
+        "aliases": ["gato negro malbec", "gato negro malbec 2019"],
+        "producer": "Gato Negro",
+        "wine_name": "Malbec",
+        "vintage": "2019",
+        "grape": "Malbec",
         "country": "Chile",
-        "region": "Valle Central",
-        "denomination": None,
-        "classification": None,
+        "region": "Central Valley",
+        "subregion": "",
+        "denomination": "",
+        "classification": "",
         "wine_type": "Tinto",
-        "grape": "Merlot",
-        "alcohol": None,
-        "body": "Médio",
-        "acidity": "Média",
-        "tannin": "Macios",
-        "oak": None,
-        "aroma": "Frutas vermelhas maduras, ameixa, toques herbais suaves",
-        "flavor": "Frutado, macio, acessível, taninos suaves",
-        "soil": None,
-        "climate": "Mediterrâneo / quente a moderado conforme zona do Valle Central",
-        "aging_rules": None,
-        "grapes": "Merlot",
-        "notes": "Entrada base de referência para Gato Negro Merlot."
+        "alcohol": "13%",
+        "aromas": "frutas vermelhas maduras, ameixa, notas frutadas",
+        "palate": "macio, frutado, taninos suaves",
+        "acidity": "média",
+        "body": "médio",
+        "soil": "",
+        "climate": "mediterrâneo",
+        "terroir": "",
+        "aging": "",
+        "pairing": "massas, carnes leves, pizzas",
+        "notes": "Entrada de conhecimento-base"
     },
-    "casillero_del_diablo_cabernet": {
-        "aliases": [
-            "Casillero del Diablo Cabernet Sauvignon",
-            "Casillero del Diablo Cabernet",
-        ],
-        "producer": "Concha y Toro",
-        "country": "Chile",
-        "region": "Valle Central",
-        "denomination": None,
-        "classification": None,
+    {
+        "aliases": ["catena malbec"],
+        "producer": "Catena",
+        "wine_name": "Malbec",
+        "vintage": "",
+        "grape": "Malbec",
+        "country": "Argentina",
+        "region": "Mendoza",
+        "subregion": "",
+        "denomination": "",
+        "classification": "",
         "wine_type": "Tinto",
-        "grape": "Cabernet Sauvignon",
-        "alcohol": None,
-        "body": "Médio a encorpado",
-        "acidity": "Média",
-        "tannin": "Médios",
-        "oak": "Pode haver uso de carvalho conforme edição/linha",
-        "aroma": "Cassis, cereja preta, especiarias, leve baunilha",
-        "flavor": "Fruta negra, especiarias, estrutura média",
-        "soil": None,
-        "climate": None,
-        "aging_rules": None,
-        "grapes": "Cabernet Sauvignon",
-        "notes": "Entrada base de referência para Casillero del Diablo Cabernet Sauvignon."
+        "alcohol": "",
+        "aromas": "violeta, ameixa, frutas negras",
+        "palate": "frutado, estruturado",
+        "acidity": "média",
+        "body": "médio a encorpado",
+        "soil": "aluvial",
+        "climate": "continental seco",
+        "terroir": "altitude andina",
+        "aging": "",
+        "pairing": "",
+        "notes": "Entrada de conhecimento-base"
     },
-    "barolo_docg": {
-        "aliases": [
-            "Barolo", "Barolo DOCG"
-        ],
-        "producer": None,
+    {
+        "aliases": ["barolo docg 2018", "barolo 2018"],
+        "producer": "",
+        "wine_name": "Barolo",
+        "vintage": "2018",
+        "grape": "Nebbiolo",
         "country": "Itália",
         "region": "Piemonte",
+        "subregion": "Barolo",
         "denomination": "Barolo DOCG",
         "classification": "DOCG",
         "wine_type": "Tinto",
-        "grape": "Nebbiolo",
-        "alcohol": "mínimo legal depende do disciplinare vigente",
-        "body": "Encorpado",
-        "acidity": "Alta",
-        "tannin": "Firmes",
-        "oak": "frequente, mas varia por produtor e estilo",
-        "aroma": "Rosa, alcatrão, cereja, ervas, especiarias",
-        "flavor": "Estruturado, longevo, taninos marcantes",
-        "soil": "Margas calcárias e argilosas, com variações locais",
-        "climate": "Continental, influência de altitude e neblina",
-        "aging_rules": "Barolo DOCG possui exigências legais de envelhecimento previstas no disciplinare",
-        "grapes": "Nebbiolo",
-        "notes": "Base geral da denominação Barolo DOCG."
+        "alcohol": "",
+        "aromas": "rosa, cereja, alcatrão",
+        "palate": "estruturado, tânico, longo",
+        "acidity": "alta",
+        "body": "encorpado",
+        "soil": "calcário, marga",
+        "climate": "continental",
+        "terroir": "Langhe",
+        "aging": "maturação prolongada obrigatória",
+        "pairing": "",
+        "notes": "Entrada de conhecimento-base"
     },
-    "bordeaux_aoc": {
-        "aliases": [
-            "Bordeaux", "Bordeaux AOC"
-        ],
-        "producer": None,
+    {
+        "aliases": ["chablis premier cru", "chablis"],
+        "producer": "",
+        "wine_name": "Chablis Premier Cru",
+        "vintage": "",
+        "grape": "Chardonnay",
         "country": "França",
-        "region": "Bordeaux",
-        "denomination": "Bordeaux AOC",
+        "region": "Bourgogne",
+        "subregion": "Chablis",
+        "denomination": "Chablis Premier Cru",
         "classification": "AOC",
-        "wine_type": None,
-        "grape": None,
-        "alcohol": None,
-        "body": None,
-        "acidity": None,
-        "tannin": None,
-        "oak": None,
-        "aroma": None,
-        "flavor": None,
-        "soil": "Diversos, incluindo cascalho, argilo-calcário e areia, conforme subzona",
-        "climate": "Marítimo / atlântico temperado",
-        "aging_rules": None,
-        "grapes": "Merlot, Cabernet Sauvignon, Cabernet Franc e outras conforme denominação/subzona",
-        "notes": "Base geral da região Bordeaux."
+        "wine_type": "Branco",
+        "alcohol": "",
+        "aromas": "cítricos, maçã verde, mineral",
+        "palate": "seco, tenso, mineral",
+        "acidity": "alta",
+        "body": "médio",
+        "soil": "Kimmeridgian",
+        "climate": "frio continental",
+        "terroir": "encostas calcárias de Chablis",
+        "aging": "",
+        "pairing": "frutos do mar",
+        "notes": "Entrada de conhecimento-base"
     }
-}
-
-
-def similarity(a: str, b: str) -> float:
-    return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
-
-
-def get_knowledge_matches(query: str, parsed: dict = None):
-    query = (query or "").strip()
-    if not query:
-        return []
-
-    results = []
-
-    for key, data in KNOWLEDGE_BASE.items():
-        aliases = data.get("aliases", [])
-        best_score = 0.0
-
-        for alias in aliases:
-            score = similarity(query, alias)
-            if alias.lower() in query.lower() or query.lower() in alias.lower():
-                score += 0.35
-            if score > best_score:
-                best_score = score
-
-        if best_score >= 0.35:
-            results.append({
-                "key": key,
-                "score": round(best_score, 4),
-                "data": data
-            })
-
-    results.sort(key=lambda x: x["score"], reverse=True)
-    return results
+]
