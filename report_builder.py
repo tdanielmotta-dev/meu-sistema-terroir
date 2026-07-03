@@ -1,344 +1,214 @@
-from difflib import SequenceMatcher
-
-from database import fetch_all_wines, fetch_all_denominations
 from parser_engine import parse_wine_query
-from knowledge_base import get_knowledge_matches
-from web_fetch import search_wine_online, search_denomination_online
+from local_search import search_local_wine, search_local_denomination
+from web_search import search_wine_online, search_denomination_online
+from extractors import extract_profile_from_text
+from database import save_online_result_to_db
 
 
-# --------------------------------------------------
-# BUSCA LOCAL
-# --------------------------------------------------
+def merge_value(base, incoming):
+    if incoming in [None, "", [], {}]:
+        return base
+    if base in [None, "", [], {}]:
+        return incoming
 
-def similarity(a: str, b: str) -> float:
-    a = (a or "").lower()
-    b = (b or "").lower()
-    return SequenceMatcher(None, a, b).ratio()
+    # se ambos são listas, junta sem duplicar
+    if isinstance(base, list) and isinstance(incoming, list):
+        out = list(base)
+        seen = {str(x).lower() for x in out}
+        for item in incoming:
+            if str(item).lower() not in seen:
+                out.append(item)
+                seen.add(str(item).lower())
+        return out
 
-
-def search_local_wine(query: str):
-    query = (query or "").strip()
-    if not query:
-        return None
-
-    wines = fetch_all_wines()
-    best = None
-    best_score = 0.0
-
-    for wine in wines:
-        haystack = " ".join([
-            str(wine.get("producer", "")),
-            str(wine.get("wine_name", "")),
-            str(wine.get("vintage", "")),
-            str(wine.get("grape", "")),
-            str(wine.get("region", "")),
-            str(wine.get("country", "")),
-            str(wine.get("denomination", "")),
-            str(wine.get("notes", "")),
-        ])
-
-        score = similarity(query, haystack)
-        if query.lower() in haystack.lower():
-            score += 0.35
-
-        if score > best_score:
-            best_score = score
-            best = wine
-
-    if best and best_score >= 0.28:
-        best = dict(best)
-        best["_score"] = round(best_score, 4)
-        return best
-
-    return None
+    # mantém o que já existe
+    return base
 
 
-def search_local_denomination(query: str):
-    query = (query or "").strip()
-    if not query:
-        return None
-
-    denoms = fetch_all_denominations()
-    best = None
-    best_score = 0.0
-
-    for den in denoms:
-        haystack = " ".join([
-            str(den.get("country", "")),
-            str(den.get("region", "")),
-            str(den.get("denomination", "")),
-            str(den.get("classification", "")),
-            str(den.get("allowed_grapes", "")),
-            str(den.get("notes", "")),
-        ])
-
-        score = similarity(query, haystack)
-        if query.lower() in haystack.lower():
-            score += 0.35
-
-        if score > best_score:
-            best_score = score
-            best = den
-
-    if best and best_score >= 0.28:
-        best = dict(best)
-        best["_score"] = round(best_score, 4)
-        return best
-
-    return None
-
-
-# --------------------------------------------------
-# PERFIL
-# --------------------------------------------------
-
-PROFILE_KEYS = [
-    "wine_title", "producer", "vintage", "country", "region",
-    "denomination", "classification", "wine_type", "grape",
-    "alcohol", "min_alcohol", "body", "acidity", "tannin", "oak",
-    "aroma", "flavor", "soil", "climate", "allowed_grapes",
-    "aging_rules"
-]
-
-
-def empty_profile(query: str):
-    return {
-        "query": query,
-        "wine_title": query,
+def merge_profiles(*profiles):
+    final = {
         "producer": None,
+        "wine_name": None,
         "vintage": None,
+        "grape": None,
+        "other_grapes": [],
         "country": None,
         "region": None,
+        "subregion": None,
         "denomination": None,
         "classification": None,
         "wine_type": None,
-        "grape": None,
         "alcohol": None,
-        "min_alcohol": None,
-        "body": None,
-        "acidity": None,
-        "tannin": None,
-        "oak": None,
-        "aroma": None,
-        "flavor": None,
-        "soil": None,
         "climate": None,
-        "allowed_grapes": None,
-        "aging_rules": None,
-        "notes": [],
-        "sources_used": []
+        "soil": None,
+        "terroir": None,
+        "acidity": None,
+        "body": None,
+        "tannins": None,
+        "aging": None,
+        "aromas": None,
+        "palate": None,
+        "pairing": None,
+        "notes": None,
     }
 
+    for profile in profiles:
+        if not profile:
+            continue
+        for key in final.keys():
+            final[key] = merge_value(final.get(key), profile.get(key))
 
-def apply_if_empty(profile: dict, key: str, value, source_label: str = None):
-    if value in (None, "", []):
-        return
-    if profile.get(key) in (None, "", []):
-        profile[key] = value
-        if source_label:
-            profile["sources_used"].append(f"{key} ← {source_label}")
-
-
-# --------------------------------------------------
-# MERGES
-# --------------------------------------------------
-
-def merge_parsed(profile: dict, parsed: dict):
-    if not parsed:
-        return
-
-    apply_if_empty(profile, "vintage", parsed.get("vintage"), "parser")
-    apply_if_empty(profile, "grape", parsed.get("grape"), "parser")
-    apply_if_empty(profile, "country", parsed.get("country"), "parser")
-    apply_if_empty(profile, "region", parsed.get("region"), "parser")
-    apply_if_empty(profile, "denomination", parsed.get("denomination"), "parser")
+    return final
 
 
-def merge_local_wine(profile: dict, wine: dict):
+def wine_to_profile(wine: dict):
     if not wine:
-        return
-
-    mapping = {
-        "wine_title": wine.get("wine_name"),
+        return {}
+    return {
         "producer": wine.get("producer"),
+        "wine_name": wine.get("wine_name"),
         "vintage": wine.get("vintage"),
+        "grape": wine.get("grape"),
         "country": wine.get("country"),
         "region": wine.get("region"),
+        "subregion": wine.get("subregion"),
         "denomination": wine.get("denomination"),
+        "classification": wine.get("classification"),
         "wine_type": wine.get("wine_type"),
-        "grape": wine.get("grape"),
-        "alcohol": wine.get("alcohol"),
-        "body": wine.get("body"),
-        "acidity": wine.get("acidity"),
-        "tannin": wine.get("tannin"),
-        "oak": wine.get("oak"),
-        "aroma": wine.get("aroma"),
-        "flavor": wine.get("flavor"),
-        "soil": wine.get("soil"),
+        "alcohol": f"{wine.get('alcohol')}%" if wine.get("alcohol") not in [None, ""] else None,
         "climate": wine.get("climate"),
-        "aging_rules": wine.get("aging_rules"),
+        "soil": wine.get("soil"),
+        "terroir": wine.get("terroir"),
+        "acidity": wine.get("acidity"),
+        "body": wine.get("body"),
+        "tannins": wine.get("tannins"),
+        "aging": wine.get("aging"),
+        "aromas": wine.get("aromas"),
+        "palate": wine.get("palate"),
+        "pairing": wine.get("pairing"),
+        "notes": wine.get("notes"),
+        "other_grapes": []
     }
 
-    for k, v in mapping.items():
-        apply_if_empty(profile, k, v, "banco local vinho")
 
-    if wine.get("notes"):
-        profile["notes"].append(f"Banco local vinho: {wine.get('notes')}")
+def denom_to_profile(den: dict):
+    if not den:
+        return {}
+    grapes = []
+    raw = den.get("allowed_grapes")
+    if raw:
+        grapes = [x.strip() for x in str(raw).split(",") if x.strip()]
 
-
-def merge_local_denom(profile: dict, denom: dict):
-    if not denom:
-        return
-
-    mapping = {
-        "country": denom.get("country"),
-        "region": denom.get("region"),
-        "denomination": denom.get("denomination"),
-        "classification": denom.get("classification"),
-        "allowed_grapes": denom.get("allowed_grapes"),
-        "soil": denom.get("soil"),
-        "climate": denom.get("climate"),
-        "aging_rules": denom.get("aging_rules"),
+    return {
+        "country": den.get("country"),
+        "region": den.get("region"),
+        "subregion": den.get("subregion"),
+        "denomination": den.get("denomination"),
+        "classification": den.get("classification"),
+        "grape": grapes[0] if grapes else None,
+        "other_grapes": grapes[1:] if len(grapes) > 1 else [],
+        "alcohol": f"{den.get('min_alcohol')}% mínimo" if den.get("min_alcohol") not in [None, ""] else None,
+        "aging": den.get("aging_rules"),
+        "climate": den.get("climate"),
+        "soil": den.get("soil"),
+        "terroir": den.get("terroir"),
+        "notes": den.get("notes"),
     }
 
-    for k, v in mapping.items():
-        apply_if_empty(profile, k, v, "banco local denominação")
 
-    if denom.get("min_alcohol"):
-        apply_if_empty(profile, "min_alcohol", f"{denom.get('min_alcohol')}%", "banco local denominação")
+def parsed_to_profile(parsed: dict):
+    if not parsed:
+        return {}
+    grapes = parsed.get("grapes_found") or []
+    return {
+        "producer": parsed.get("producer_guess"),
+        "wine_name": parsed.get("wine_name_guess"),
+        "vintage": parsed.get("vintage"),
+        "grape": grapes[0] if grapes else None,
+        "other_grapes": grapes[1:] if len(grapes) > 1 else [],
+        "classification": parsed.get("denom_terms_found", [None])[0] if parsed.get("denom_terms_found") else None
+    }
 
-    if denom.get("notes"):
-        profile["notes"].append(f"Banco local denominação: {denom.get('notes')}")
-
-
-def merge_kb(profile: dict, kb_matches: list):
-    for item in kb_matches or []:
-        data = item.get("data", {})
-        source = f"knowledge_base:{item.get('key')}"
-
-        mapping = {
-            "producer": data.get("producer"),
-            "country": data.get("country"),
-            "region": data.get("region"),
-            "denomination": data.get("denomination"),
-            "classification": data.get("classification"),
-            "wine_type": data.get("wine_type"),
-            "grape": data.get("grape"),
-            "alcohol": data.get("alcohol"),
-            "body": data.get("body"),
-            "acidity": data.get("acidity"),
-            "tannin": data.get("tannin"),
-            "oak": data.get("oak"),
-            "aroma": data.get("aroma"),
-            "flavor": data.get("flavor"),
-            "soil": data.get("soil"),
-            "climate": data.get("climate"),
-            "aging_rules": data.get("aging_rules"),
-        }
-
-        for k, v in mapping.items():
-            apply_if_empty(profile, k, v, source)
-
-        if data.get("grapes"):
-            apply_if_empty(profile, "allowed_grapes", data.get("grapes"), source)
-
-        if data.get("notes"):
-            profile["notes"].append(f"Knowledge base: {data.get('notes')}")
-
-
-def merge_web_pages(profile: dict, pages: list, source_prefix: str):
-    for idx, page in enumerate(pages or [], start=1):
-        extracted = page.get("extracted", {})
-        if not extracted:
-            continue
-
-        source_type = extracted.get("source_type", "generic")
-        src = f"{source_prefix}:{source_type}#{idx}"
-
-        for key in [
-            "producer", "vintage", "country", "region", "classification",
-            "grape", "alcohol", "min_alcohol", "aroma", "flavor", "body",
-            "acidity", "tannin", "oak", "soil", "climate",
-            "aging_rules", "allowed_grapes"
-        ]:
-            apply_if_empty(profile, key, extracted.get(key), src)
-
-        title = page.get("title")
-        url = page.get("url")
-        if title or url:
-            profile["notes"].append(f"Fonte web lida [{source_type}]: {title or 'sem título'} | {url or ''}")
-
-
-def build_summary(wine, denom, kb_matches, wine_web, denom_web, profile):
-    summary = []
-
-    if wine:
-        summary.append(f"Vinho encontrado no banco local: {wine.get('producer', '')} {wine.get('wine_name', '')}")
-
-    if denom:
-        summary.append(f"Denominação encontrada no banco local: {denom.get('denomination', '')}")
-
-    if kb_matches:
-        summary.append(f"Knowledge base encontrou {len(kb_matches)} correspondência(s).")
-
-    if wine_web:
-        summary.append(f"Internet: {len(wine_web)} página(s) de vinho/rótulo processadas.")
-
-    if denom_web:
-        summary.append(f"Internet: {len(denom_web)} página(s) de região/denominação processadas.")
-
-    filled = [k for k in PROFILE_KEYS if profile.get(k) not in (None, "", [])]
-    summary.append(f"Campos preenchidos na ficha: {len(filled)}/{len(PROFILE_KEYS)}.")
-
-    if profile.get("sources_used"):
-        summary.append(f"Total de atribuições de fonte: {len(profile['sources_used'])}.")
-
-    return summary
-
-
-# --------------------------------------------------
-# FUNÇÃO PRINCIPAL
-# --------------------------------------------------
 
 def build_wine_report(query: str):
-    query = (query or "").strip()
+    parsed = parse_wine_query(query)
 
-    parsed = parse_wine_query(query) if query else {}
-    wine = search_local_wine(query) if query else None
-    denom = search_local_denomination(query) if query else None
-    kb_matches = get_knowledge_matches(query, parsed) if query else []
+    local_wine = search_local_wine(query)
+    local_denom = search_local_denomination(query)
 
-    wine_web = search_wine_online(query, max_pages=6) if query else []
+    wine_results = search_wine_online(query)
+    denom_results = search_denomination_online(query)
 
-    denom_query = query
-    if parsed.get("region"):
-        denom_query += f" {parsed.get('region')}"
-    if parsed.get("denomination"):
-        denom_query += f" {parsed.get('denomination')}"
+    all_sources = []
+    seen_urls = set()
 
-    denom_web = search_denomination_online(denom_query, max_pages=6) if query else []
+    for item in wine_results + denom_results:
+        url = item.get("url", "")
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            all_sources.append(item)
 
-    profile = empty_profile(query)
+    extracted_profiles = []
+    online_sources = []
 
-    merge_parsed(profile, parsed)
-    merge_local_wine(profile, wine)
-    merge_local_denom(profile, denom)
-    merge_kb(profile, kb_matches)
-    merge_web_pages(profile, wine_web, "web_vinho")
-    merge_web_pages(profile, denom_web, "web_regiao")
+    for item in all_sources:
+        extracted = extract_profile_from_text(
+            query=query,
+            title=item.get("title", ""),
+            snippet=item.get("snippet", ""),
+            page_summary=item.get("page_summary", "")
+        )
+        enriched = dict(item)
+        enriched["extracted"] = extracted
+        online_sources.append(enriched)
+        if extracted:
+            extracted_profiles.append(extracted)
 
-    summary = build_summary(wine, denom, kb_matches, wine_web, denom_web, profile)
+    final_profile = merge_profiles(
+        parsed_to_profile(parsed),
+        wine_to_profile(local_wine),
+        denom_to_profile(local_denom),
+        *extracted_profiles
+    )
+
+    summary = []
+
+    summary.append(f"Consulta: {query}")
+
+    if local_wine:
+        summary.append(
+            f"Vinho localizado no banco local: {local_wine.get('producer', '')} {local_wine.get('wine_name', '')} "
+            f"({local_wine.get('vintage', '')})"
+        )
+    else:
+        summary.append("Nenhum vinho correspondente foi localizado no banco local.")
+
+    if local_denom:
+        summary.append(
+            f"Denominação localizada no banco: {local_denom.get('denomination', '')} "
+            f"- {local_denom.get('classification', '')}"
+        )
+    else:
+        summary.append("Nenhuma denominação correspondente foi localizada no banco local.")
+
+    if online_sources:
+        summary.append(f"Foram consolidadas {len(online_sources)} fontes online.")
+    else:
+        summary.append("Nenhuma fonte online útil foi consolidada.")
+
+    # salva resultado consolidado no banco para enriquecer pesquisas futuras
+    try:
+        save_online_result_to_db(final_profile)
+        summary.append("Resultado consolidado salvo no banco local para reaproveitamento futuro.")
+    except Exception:
+        summary.append("Falha ao salvar o resultado consolidado no banco local.")
 
     return {
         "query": query,
         "parsed_query": parsed,
-        "wine_found": wine,
-        "denomination_found": denom,
-        "knowledge_matches": kb_matches,
-        "profile": profile,
-        "web": {
-            "wine_results": wine_web,
-            "denomination_results": denom_web
-        },
+        "wine_found": local_wine,
+        "denomination_found": local_denom,
+        "online_sources": online_sources,
+        "final_profile": final_profile,
         "summary": summary
     }
