@@ -1,33 +1,20 @@
 import re
 
-KNOWN_GRAPES = [
-    "cabernet sauvignon", "cabernet franc", "merlot", "malbec", "pinot noir",
-    "syrah", "shiraz", "nebbiolo", "sangiovese", "tempranillo", "carmenere",
-    "chardonnay", "sauvignon blanc", "riesling", "gewurztraminer", "chenin blanc",
-    "viognier", "grenache", "garnacha", "touriga nacional", "aragonez", "tannat"
+GRAPES = [
+    "Malbec", "Merlot", "Cabernet Sauvignon", "Cabernet Franc", "Pinot Noir",
+    "Nebbiolo", "Chardonnay", "Sauvignon Blanc", "Syrah", "Carménère",
+    "Tempranillo", "Sangiovese", "Grenache", "Gamay", "Riesling"
 ]
 
-KNOWN_COUNTRIES = [
-    "frança", "italia", "itália", "espanha", "portugal", "chile", "argentina",
-    "brasil", "uruguai", "alemanha", "australia", "austrália", "estados unidos"
-]
-
-KNOWN_REGIONS = [
-    "bordeaux", "bourgogne", "burgundy", "champagne", "piemonte", "toscana",
-    "rioja", "douro", "central valley", "mendoza", "barolo", "barbaresco",
-    "chablis", "sauternes", "medoc", "médoc"
-]
-
-KNOWN_DENOMINATIONS = [
-    "aoc", "doc", "docg", "dop", "igp", "igt", "do", "vt"
-]
+COUNTRIES = ["França", "Itália", "Chile", "Argentina", "Espanha", "Portugal", "Brasil"]
+REGIONS = ["Bordeaux", "Piemonte", "Barolo", "Rioja", "Mendoza", "Central Valley", "Douro", "Champagne"]
+DENOMS = ["DOCG", "DOC", "AOC", "DO", "DOP", "IGP", "IG", "AOP"]
 
 
 def parse_wine_query(query: str):
-    raw = (query or "").strip()
-    normalized = " ".join(raw.split())
+    query = (query or "").strip()
+    tokens = query.split()
 
-    tokens = normalized.split()
     vintage = None
     grape = None
     country = None
@@ -35,40 +22,38 @@ def parse_wine_query(query: str):
     subregion = None
     denomination = None
 
-    year_match = re.search(r"\b(19\d{2}|20\d{2})\b", normalized)
+    year_match = re.search(r"\b(19\d{2}|20\d{2})\b", query)
     if year_match:
         vintage = year_match.group(1)
 
-    lower = normalized.lower()
-
-    for g in sorted(KNOWN_GRAPES, key=len, reverse=True):
-        if g in lower:
-            grape = g.title()
+    for g in GRAPES:
+        if g.lower() in query.lower():
+            grape = g
             break
 
-    for c in sorted(KNOWN_COUNTRIES, key=len, reverse=True):
-        if c in lower:
-            country = c.title()
+    for c in COUNTRIES:
+        if c.lower() in query.lower():
+            country = c
             break
 
-    for r in sorted(KNOWN_REGIONS, key=len, reverse=True):
-        if r in lower:
-            region = r.title()
+    for r in REGIONS:
+        if r.lower() in query.lower():
+            region = r
             break
 
-    for d in sorted(KNOWN_DENOMINATIONS, key=len, reverse=True):
-        if re.search(rf"\b{re.escape(d)}\b", lower):
-            denomination = d.upper()
+    for d in DENOMS:
+        if re.search(rf"\b{re.escape(d)}\b", query, re.IGNORECASE):
+            denomination = d
             break
 
     return {
-        "raw_query": raw,
-        "normalized_query": normalized,
+        "raw_query": query,
+        "normalized_query": query.strip(),
         "tokens": tokens,
         "vintage": vintage,
         "grape": grape,
         "country": country,
         "region": region,
         "subregion": subregion,
-        "denomination": denomination,
+        "denomination": denomination
     }
