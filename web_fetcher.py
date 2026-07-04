@@ -1,10 +1,11 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import quote
+from urllib.parse import quote, unquote, urlparse, parse_qs
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (WineIndexOmega/Final; +https://streamlit.app)"
+    "User-Agent": "Mozilla/5.0 (WineIndex/1.0)"
 }
+
 
 def safe_get(url: str, timeout: int = 20):
     try:
@@ -14,19 +15,29 @@ def safe_get(url: str, timeout: int = 20):
     except Exception:
         return None
 
-def normalize_ddg_link(url: str):
+
+def unwrap_duckduckgo_url(url: str) -> str:
     if not url:
         return url
     if url.startswith("//"):
-        return "https:" + url
+        url = "https:" + url
+
+    try:
+        parsed = urlparse(url)
+        if "duckduckgo.com" in parsed.netloc and parsed.path.startswith("/l/"):
+            qs = parse_qs(parsed.query)
+            if "uddg" in qs and qs["uddg"]:
+                return unquote(qs["uddg"][0])
+    except Exception:
+        pass
     return url
 
+
 def duckduckgo_search(query: str, max_results: int = 8):
-    q = (query or "").strip()
-    if not q:
+    if not query:
         return []
 
-    url = f"https://html.duckduckgo.com/html/?q={quote(q)}"
+    url = f"https://html.duckduckgo.com/html/?q={quote(query)}"
     resp = safe_get(url, timeout=25)
     if not resp:
         return []
@@ -34,23 +45,22 @@ def duckduckgo_search(query: str, max_results: int = 8):
     soup = BeautifulSoup(resp.text, "lxml")
     results = []
 
-    for result in soup.select(".result"):
-        a = result.select_one("a.result__a")
+    for block in soup.select(".result"):
+        a = block.select_one("a.result__a")
         if not a:
             continue
 
         title = a.get_text(" ", strip=True)
-        href = normalize_ddg_link(a.get("href", "").strip())
+        raw_url = a.get("href", "").strip()
+        final_url = unwrap_duckduckgo_url(raw_url)
 
-        snippet = ""
-        sn = result.select_one(".result__snippet")
-        if sn:
-            snippet = sn.get_text(" ", strip=True)
+        snippet_el = block.select_one(".result__snippet")
+        snippet = snippet_el.get_text(" ", strip=True) if snippet_el else ""
 
-        if title and href:
+        if title and final_url:
             results.append({
                 "title": title,
-                "url": href,
+                "url": final_url,
                 "snippet": snippet
             })
 
@@ -59,56 +69,68 @@ def duckduckgo_search(query: str, max_results: int = 8):
 
     return results
 
-def build_search_queries(query: str, parsed: dict):
-    normalized = (parsed.get("normalized_query") or query or "").strip()
 
-    queries = [
-        f'"{normalized}" wine',
-        f'"{normalized}" vinho',
-        f'"{normalized}" vivino',
-        f'"{normalized}" wine-searcher',
-        f'"{normalized}" technical sheet',
-        f'"{normalized}" fiche technique',
-        f'"{normalized}" producer',
-        f'"{normalized}" winery',
-        f'"{normalized}" domaine',
-        f'"{normalized}" cantina',
-        f'"{normalized}" tasting notes',
-        f'"{normalized}" alcohol',
-        f'"{normalized}" region',
-    ]
+def extract_page_text(url: str, max_paragraphs: int = 8):
+    resp = safe_get(url, timeout=25)
+    if not resp:
+        return ""
 
-    if parsed.get("region"):
-        queries.append(f'"{normalized}" "{parsed["region"]}" wine')
+    soup = BeautifulSoup(resp.text, "lxml")
 
-    if parsed.get("grape"):
-        queries.append(f'"{normalized}" "{parsed["grape"]}"')
+    for tag in soup(["script", "style", "noscript"]):
+        tag.decompose()
 
-    # dedup
+    texts = []
+
+    meta_desc = soup.find("meta", attrs={"name": "description"})
+    if meta_desc and meta_desc.get("content"):
+        texts.append(meta_desc.get("content", "").strip())
+
+    og_desc = soup.find("meta", attrs={"property": "og:description"})
+    if og_desc and og_desc.get("content"):
+        texts.append(og_desc.get("content", "").strip())
+
+    for p in soup.find_all(["p", "li"]):
+        t = p.get_text(" ", strip=True)
+        if len(t) >= 40:
+            texts.append(t)
+        if len(texts) >= max_paragraphs:
+            break
+
+    dedup = []
     seen = set()
-    out = []
-    for q in queries:
-        if q.lower() not in seen:
-            out.append(q)
-            seen.add(q.lower())
-    return out
+    for t in texts:
+        key = t.strip().lower()
+        if key and key not in seen:
+            dedup.append(t)
+            seen.add(key)
 
-def search_wine_online(query: str, parsed: dict, per_query_results: int = 4, max_total: int = 18):
-    all_results = []
-    seen_urls = set()
+    return "\n".join(dedup[:max_paragraphs])
 
-    queries = build_search_queries(query, parsed)
 
-    for q in queries:
-        results = duckduckgo_search(q, max_results=per_query_results)
-        for item in results:
-            url = item.get("url", "")
-            if not url or url in seen_urls:
-                continue
-            seen_urls.add(url)
-            item["search_query"] = q
-            all_results.append(item)
-            if len(all_results) >= max_total:
-                return all_results
+def search_wine_online(query: str):
+    q = f'"{query}" wine OR vinho OR vivino OR winery OR domaine OR cantina'
+    results = duckduckgo_search(q, max_results=8)
 
-    return all_results
+    enriched = []
+    for item in results[:5]:
+        page_text = extract_page_text(item["url"], max_paragraphs=6)
+        enriched.append({
+            **item,
+            "page_text": page_text
+        })
+    return enriched
+
+
+def search_denomination_online(query: str):
+    q = f'"{query}" appellation OR DOCG OR DOC OR AOC OR AOP OR DOP OR IGP OR terroir'
+    results = duckduckgo_search(q, max_results=8)
+
+    enriched = []
+    for item in results[:5]:
+        page_text = extract_page_text(item["url"], max_paragraphs=6)
+        enriched.append({
+            **item,
+            "page_text": page_text
+        })
+    return enriched
