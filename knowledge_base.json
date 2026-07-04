@@ -1,29 +1,5 @@
 [
   {
-    "aliases": ["dom perignon", "dom pérignon"],
-    "producer": "Moët & Chandon",
-    "wine_name": "Dom Pérignon",
-    "vintage": "",
-    "grape": "Chardonnay, Pinot Noir",
-    "country": "França",
-    "region": "Champagne",
-    "subregion": "",
-    "denomination": "Champagne AOC",
-    "classification": "Prestige Cuvée",
-    "wine_type": "Espumante",
-    "alcohol": "12.5%",
-    "aromas": "cítricos, brioche, flores, frutas brancas, tostado",
-    "palate": "fino, cremoso, mineral, complexo",
-    "acidity": "alta",
-    "body": "médio a encorpado",
-    "soil": "calcário, giz",
-    "climate": "frio continental",
-    "terroir": "Champagne de solos calcários e clima marginal",
-    "aging": "longo amadurecimento sobre borras",
-    "pairing": "ostras, caviar, frutos do mar, aves nobres",
-    "notes": "KB seed"
-  },
-  {
     "aliases": ["gato negro malbec", "gato negro malbec 2019"],
     "producer": "Gato Negro",
     "wine_name": "Malbec",
@@ -45,6 +21,30 @@
     "terroir": "",
     "aging": "",
     "pairing": "massas, carnes leves, pizzas",
-    "notes": "KB seed"
+    "notes": "Entrada de conhecimento-base"
+  },
+  {
+    "aliases": ["dom perignon", "dom pérignon", "dom perignon vintage"],
+    "producer": "Moët & Chandon",
+    "wine_name": "Dom Pérignon",
+    "vintage": "",
+    "grape": "Chardonnay, Pinot Noir",
+    "country": "França",
+    "region": "Champagne",
+    "subregion": "",
+    "denomination": "Champagne AOC",
+    "classification": "AOC",
+    "wine_type": "Espumante",
+    "alcohol": "12.5%",
+    "aromas": "cítricos, brioche, flores brancas, maçã verde",
+    "palate": "cremoso, tenso, mineral, longo",
+    "acidity": "alta",
+    "body": "médio",
+    "soil": "calcário",
+    "climate": "frio continental",
+    "terroir": "Champagne",
+    "aging": "sur lies prolongado",
+    "pairing": "frutos do mar, caviar, alta gastronomia",
+    "notes": "Entrada de conhecimento-base"
   }
 ]
