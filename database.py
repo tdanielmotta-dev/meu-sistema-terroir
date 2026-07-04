@@ -23,6 +23,7 @@ def init_db():
         subregion TEXT,
         country TEXT,
         denomination TEXT,
+        classification TEXT,
         wine_type TEXT,
         alcohol REAL,
         aromas TEXT,
@@ -80,6 +81,7 @@ def seed_if_empty():
                 "Central Valley",
                 "",
                 "Chile",
+                "DO",
                 "",
                 "Tinto",
                 13.0,
@@ -95,28 +97,6 @@ def seed_if_empty():
                 "Seed inicial"
             ),
             (
-                "Catena",
-                "Malbec",
-                "",
-                "Malbec",
-                "Mendoza",
-                "",
-                "Argentina",
-                "",
-                "Tinto",
-                13.5,
-                "violeta, ameixa, frutas negras",
-                "estruturado, taninos macios",
-                "média",
-                "médio a encorpado",
-                "aluvial",
-                "continental seco",
-                "altitude andina",
-                "",
-                "",
-                "Seed inicial"
-            ),
-            (
                 "Château Exemplo",
                 "Merlot Reserva",
                 "2020",
@@ -125,18 +105,19 @@ def seed_if_empty():
                 "",
                 "França",
                 "Bordeaux AOC",
+                "AOC",
                 "Tinto",
                 13.5,
-                "frutas vermelhas, especiarias",
-                "macio, frutado",
+                "ameixa, cassis",
+                "estruturado, elegante",
                 "média",
-                "médio",
+                "médio+",
                 "argilo-calcário",
-                "oceânico",
-                "margem esquerda/direita de Bordeaux",
-                "",
-                "",
-                "Seed inicial"
+                "temperado marítimo",
+                "cascalho e argila",
+                "carvalho francês",
+                "carnes assadas",
+                "Exemplo inicial"
             ),
             (
                 "Cantina Exemplo",
@@ -147,31 +128,47 @@ def seed_if_empty():
                 "Barolo",
                 "Itália",
                 "Barolo DOCG",
+                "DOCG",
                 "Tinto",
                 14.0,
-                "rosa, alcatrão, cereja",
-                "estruturado, tânico, longo",
+                "rosas, alcatrão, cereja",
+                "tânico, complexo, longo",
                 "alta",
                 "encorpado",
-                "calcário-margoso",
+                "marga calcária",
                 "continental",
-                "colinas de Langhe",
-                "envelhecimento prolongado",
-                "",
-                "Seed inicial"
+                "encostas e solos calcários",
+                "maturação longa obrigatória",
+                "caça, risotos, cordeiro",
+                "Exemplo inicial"
             ),
         ]
 
         cur.executemany("""
         INSERT INTO wines (
             producer, wine_name, vintage, grape, region, subregion, country,
-            denomination, wine_type, alcohol, aromas, palate, acidity, body,
-            soil, climate, terroir, aging, pairing, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            denomination, classification, wine_type, alcohol,
+            aromas, palate, acidity, body, soil, climate, terroir,
+            aging, pairing, notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, wines_seed)
 
     if den_count == 0:
         den_seed = [
+            (
+                "Chile",
+                "Central Valley",
+                "",
+                "DO",
+                "",
+                "Malbec, Cabernet Sauvignon, Merlot, Carmenere, Syrah",
+                11.5,
+                "",
+                "",
+                "mediterrâneo",
+                "",
+                "Denominação genérica simplificada para seed"
+            ),
             (
                 "França",
                 "Bordeaux",
@@ -180,10 +177,10 @@ def seed_if_empty():
                 "AOC",
                 "Merlot, Cabernet Sauvignon, Cabernet Franc",
                 10.5,
-                "Variável conforme subzona e estilo",
+                "Variável conforme estilo/subzona",
                 "argilo-calcário, cascalho",
-                "oceânico",
-                "margens do Gironde",
+                "temperado marítimo",
+                "cascalho, argila, calcário",
                 "Denominação genérica de Bordeaux"
             ),
             (
@@ -195,24 +192,10 @@ def seed_if_empty():
                 "Nebbiolo",
                 13.0,
                 "Maturação obrigatória conforme regra da DOCG",
-                "calcário, marga",
+                "marga calcária",
                 "continental",
-                "Langhe",
+                "encostas e solos calcários",
                 "Denominação clássica do Piemonte"
-            ),
-            (
-                "Chile",
-                "Central Valley",
-                "",
-                "",
-                "",
-                "Cabernet Sauvignon, Merlot, Malbec, Carmenere, Syrah",
-                None,
-                "",
-                "",
-                "mediterrâneo",
-                "",
-                "Região-base de seed"
             ),
         ]
 
