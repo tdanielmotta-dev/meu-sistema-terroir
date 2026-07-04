@@ -3,10 +3,34 @@ from pathlib import Path
 
 DB_PATH = Path("wineindex.db")
 
+WINE_FIELDS = [
+    "producer",
+    "wine_name",
+    "vintage",
+    "grape",
+    "country",
+    "region",
+    "subregion",
+    "denomination",
+    "classification",
+    "wine_type",
+    "alcohol",
+    "aromas",
+    "palate",
+    "acidity",
+    "body",
+    "soil",
+    "climate",
+    "terroir",
+    "aging",
+    "pairing",
+    "notes",
+]
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
-
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 def init_db():
     conn = get_connection()
@@ -19,13 +43,13 @@ def init_db():
         wine_name TEXT,
         vintage TEXT,
         grape TEXT,
+        country TEXT,
         region TEXT,
         subregion TEXT,
-        country TEXT,
         denomination TEXT,
         classification TEXT,
         wine_type TEXT,
-        alcohol REAL,
+        alcohol TEXT,
         aromas TEXT,
         palate TEXT,
         acidity TEXT,
@@ -39,44 +63,31 @@ def init_db():
     )
     """)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS denominations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        country TEXT,
-        region TEXT,
-        subregion TEXT,
-        denomination TEXT,
-        classification TEXT,
-        allowed_grapes TEXT,
-        min_alcohol REAL,
-        aging_rules TEXT,
-        soil TEXT,
-        climate TEXT,
-        terroir TEXT,
-        notes TEXT
-    )
-    """)
-
     conn.commit()
     conn.close()
-
 
 def seed_if_empty():
     conn = get_connection()
     cur = conn.cursor()
 
     cur.execute("SELECT COUNT(*) FROM wines")
-    wines_count = cur.fetchone()[0]
+    count = cur.fetchone()[0]
 
-    cur.execute("SELECT COUNT(*) FROM denominations")
-    den_count = cur.fetchone()[0]
-
-    if wines_count == 0:
-        wines_seed = [
+    if count == 0:
+        seed_rows = [
             (
-                "Gato Negro", "Malbec", "2019", "Malbec", "Central Valley", "", "Chile",
-                "", "", "Tinto", 13.0,
-                "frutas vermelhas, ameixa",
+                "Gato Negro",
+                "Malbec",
+                "2019",
+                "Malbec",
+                "Chile",
+                "Central Valley",
+                "",
+                "",
+                "",
+                "Tinto",
+                "13%",
+                "frutas vermelhas maduras, ameixa",
                 "frutado, macio, médio corpo",
                 "média",
                 "médio",
@@ -84,98 +95,114 @@ def seed_if_empty():
                 "mediterrâneo",
                 "",
                 "",
-                "",
+                "massas, carnes leves, pizzas",
                 "Seed inicial"
             ),
             (
-                "Château Exemplo", "Merlot Reserva", "2020", "Merlot", "Bordeaux", "", "França",
-                "Bordeaux AOC", "AOC", "Tinto", 13.5,
-                "frutas negras, cassis",
-                "taninos médios, final seco",
-                "média",
-                "médio",
-                "argilo-calcário",
-                "temperado marítimo",
-                "margem esquerda clássica",
-                "carvalho francês",
-                "carnes e queijos",
-                "Exemplo inicial de vinho no banco"
+                "Moët & Chandon",
+                "Dom Pérignon",
+                "",
+                "Chardonnay, Pinot Noir",
+                "França",
+                "Champagne",
+                "",
+                "Champagne AOC",
+                "Prestige Cuvée",
+                "Espumante",
+                "12.5%",
+                "cítricos, brioche, flores, frutas brancas, tostado",
+                "fino, cremoso, mineral, complexo",
+                "alta",
+                "médio a encorpado",
+                "calcário, giz",
+                "frio continental",
+                "Champagne de solos calcários e clima marginal",
+                "longo amadurecimento sobre borras",
+                "ostras, caviar, frutos do mar, aves nobres",
+                "Seed inicial Dom Pérignon"
             ),
             (
-                "Cantina Exemplo", "Barolo Classico", "2018", "Nebbiolo", "Piemonte", "Barolo", "Itália",
-                "Barolo DOCG", "DOCG", "Tinto", 14.0,
-                "rosa, alcatrão, cereja",
-                "estruturado, tânico, longo",
+                "Produtor Genérico",
+                "Barolo",
+                "",
+                "Nebbiolo",
+                "Itália",
+                "Piemonte",
+                "Barolo",
+                "Barolo DOCG",
+                "DOCG",
+                "Tinto",
+                "14%",
+                "rosa, alcatrão, cereja, especiarias",
+                "estruturado, taninos firmes, final longo",
                 "alta",
                 "encorpado",
                 "margas calcárias",
                 "continental",
-                "colinas de Barolo",
-                "envelhecimento prolongado",
-                "carnes de caça, risoto",
-                "Exemplo inicial de vinho no banco"
+                "colinas de Langhe",
+                "envelhecimento obrigatório conforme DOCG",
+                "carnes assadas, caça, trufas",
+                "Seed inicial Barolo"
             ),
         ]
 
         cur.executemany("""
         INSERT INTO wines (
-            producer, wine_name, vintage, grape, region, subregion, country,
-            denomination, classification, wine_type, alcohol,
-            aromas, palate, acidity, body, soil, climate, terroir,
-            aging, pairing, notes
+            producer, wine_name, vintage, grape, country, region, subregion,
+            denomination, classification, wine_type, alcohol, aromas, palate,
+            acidity, body, soil, climate, terroir, aging, pairing, notes
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, wines_seed)
-
-    if den_count == 0:
-        den_seed = [
-            (
-                "França", "Bordeaux", "", "Bordeaux AOC", "AOC",
-                "Merlot, Cabernet Sauvignon, Cabernet Franc",
-                10.5,
-                "Variável conforme subzona e estilo",
-                "argilo-calcário e cascalho",
-                "temperado marítimo",
-                "grande mosaico de terroirs bordaleses",
-                "Denominação genérica de Bordeaux"
-            ),
-            (
-                "Itália", "Piemonte", "Barolo", "Barolo DOCG", "DOCG",
-                "Nebbiolo",
-                13.0,
-                "Maturação obrigatória conforme regra da DOCG",
-                "margas calcárias",
-                "continental",
-                "colinas de Barolo",
-                "Denominação clássica do Piemonte"
-            ),
-        ]
-
-        cur.executemany("""
-        INSERT INTO denominations (
-            country, region, subregion, denomination, classification,
-            allowed_grapes, min_alcohol, aging_rules, soil, climate, terroir, notes
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, den_seed)
+        """, seed_rows)
 
     conn.commit()
     conn.close()
 
-
 def fetch_all_wines():
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    cur.execute("SELECT * FROM wines ORDER BY producer, wine_name")
+    cur.execute("SELECT * FROM wines ORDER BY producer, wine_name, vintage")
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
+def insert_wine_if_new(record: dict):
+    """
+    Salva no banco se houver pelo menos producer ou wine_name.
+    Não faz deduplicação perfeita; usa heurística simples.
+    """
+    if not isinstance(record, dict):
+        return False
 
-def fetch_all_denominations():
+    producer = (record.get("producer") or "").strip()
+    wine_name = (record.get("wine_name") or "").strip()
+    vintage = (record.get("vintage") or "").strip()
+
+    if not producer and not wine_name:
+        return False
+
     conn = get_connection()
-    conn.row_factory = sqlite3.Row
     cur = conn.cursor()
-    cur.execute("SELECT * FROM denominations ORDER BY country, region, denomination")
-    rows = cur.fetchall()
+
+    cur.execute("""
+    SELECT id FROM wines
+    WHERE lower(coalesce(producer,'')) = lower(?)
+      AND lower(coalesce(wine_name,'')) = lower(?)
+      AND lower(coalesce(vintage,'')) = lower(?)
+    LIMIT 1
+    """, (producer, wine_name, vintage))
+
+    exists = cur.fetchone()
+    if exists:
+        conn.close()
+        return False
+
+    values = [record.get(field, "") for field in WINE_FIELDS]
+
+    cur.execute(f"""
+    INSERT INTO wines ({", ".join(WINE_FIELDS)})
+    VALUES ({", ".join(["?"] * len(WINE_FIELDS))})
+    """, values)
+
+    conn.commit()
     conn.close()
-    return [dict(r) for r in rows]
+    return True
