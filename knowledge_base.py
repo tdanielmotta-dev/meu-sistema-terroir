@@ -26,7 +26,7 @@ KNOWLEDGE_BASE = [
         "notes": "Entrada de conhecimento-base"
     },
     {
-        "aliases": ["barolo classico", "barolo docg", "barolo 2018"],
+        "aliases": ["barolo classico 2018", "barolo docg 2018"],
         "producer": "",
         "wine_name": "Barolo",
         "vintage": "2018",
@@ -38,47 +38,48 @@ KNOWLEDGE_BASE = [
         "classification": "DOCG",
         "wine_type": "Tinto",
         "alcohol": "",
-        "aromas": "rosa, cereja, alcaçuz, alcatrão",
+        "aromas": "rosas, cereja ácida, alcaçuz, alcatrão",
         "palate": "estruturado, tânico, longo",
         "acidity": "alta",
         "body": "encorpado",
-        "soil": "marga calcária",
+        "soil": "margas calcárias",
         "climate": "continental",
-        "terroir": "encostas calcárias",
-        "aging": "maturação longa conforme regra DOCG",
-        "pairing": "carnes, caça, risoto",
+        "terroir": "colinas do Piemonte",
+        "aging": "envelhecimento prolongado",
+        "pairing": "carnes, trufas, risoto",
         "notes": "Entrada de conhecimento-base"
     }
 ]
 
 
-def _sim(a: str, b: str) -> float:
-    return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
+def similarity(a: str, b: str) -> float:
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
-def search_knowledge_base(query: str):
+def search_knowledge_base(query: str, threshold: float = 0.45):
     query = (query or "").strip()
     if not query:
         return []
 
-    results = []
-    q_lower = query.lower()
+    hits = []
 
     for item in KNOWLEDGE_BASE:
-        aliases = item.get("aliases", [])
-        best = 0.0
+        haystacks = item.get("aliases", []) + [
+            f"{item.get('producer', '')} {item.get('wine_name', '')} {item.get('vintage', '')}".strip()
+        ]
 
-        for alias in aliases:
-            score = _sim(q_lower, alias.lower())
-            if alias.lower() in q_lower or q_lower in alias.lower():
+        best_score = 0.0
+        for h in haystacks:
+            score = similarity(query, h)
+            if query.lower() in h.lower():
                 score += 0.35
-            if score > best:
-                best = score
+            if score > best_score:
+                best_score = score
 
-        if best >= 0.35:
-            row = dict(item)
-            row["_score"] = round(best, 4)
-            results.append(row)
+        if best_score >= threshold:
+            copy_item = dict(item)
+            copy_item["_score"] = round(best_score, 4)
+            hits.append(copy_item)
 
-    results.sort(key=lambda x: x.get("_score", 0), reverse=True)
-    return results
+    hits.sort(key=lambda x: x.get("_score", 0), reverse=True)
+    return hits
