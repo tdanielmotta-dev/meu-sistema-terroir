@@ -1,174 +1,142 @@
 import re
-import requests
-from bs4 import BeautifulSoup
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
-}
-
-FIELD_PATTERNS = {
-    "alcohol": [
-        r"(\d{1,2}[.,]\d)\s*%",
-        r"(\d{1,2})\s*%"
-    ],
-    "vintage": [
-        r"\b(19\d{2}|20\d{2})\b"
-    ]
-}
 
 GRAPES = [
     "Cabernet Sauvignon", "Cabernet Franc", "Merlot", "Malbec", "Pinot Noir",
-    "Syrah", "Shiraz", "Nebbiolo", "Tempranillo", "Chardonnay", "Sauvignon Blanc",
-    "Riesling", "Gewurztraminer", "Carmenere", "Sangiovese"
+    "Syrah", "Shiraz", "Nebbiolo", "Sangiovese", "Tempranillo", "Chardonnay",
+    "Sauvignon Blanc", "Riesling", "Pinot Grigio", "Pinot Gris", "Carmenere",
+    "Touriga Nacional", "Zinfandel", "Grenache", "Garnacha", "Viognier",
+    "Gewurztraminer", "Chenin Blanc", "Moscato", "Glera", "Corvina", "Barbera"
 ]
 
 COUNTRIES = [
-    "France", "França", "Italy", "Itália", "Italia", "Spain", "Espanha", "Portugal",
-    "Argentina", "Chile", "Brazil", "Brasil", "Uruguay", "Uruguai", "USA", "Estados Unidos"
+    "France", "França", "Italy", "Itália", "Spain", "Espanha", "Portugal",
+    "Chile", "Argentina", "Brazil", "Brasil", "Australia", "USA", "South Africa"
 ]
 
 REGIONS = [
-    "Bordeaux", "Bourgogne", "Burgundy", "Chablis", "Champagne", "Piemonte",
-    "Barolo", "Barbaresco", "Toscana", "Rioja", "Douro", "Mendoza",
-    "Central Valley", "Maipo", "Colchagua", "Casablanca"
+    "Champagne", "Bordeaux", "Bourgogne", "Burgundy", "Rioja", "Douro",
+    "Piemonte", "Toscana", "Mendoza", "Maipo", "Colchagua", "Casablanca",
+    "Central Valley", "Napa", "Sonoma", "Barolo", "Barbaresco", "Chablis"
 ]
 
-DENOMS = [
-    "DOCG", "DOC", "AOC", "DOP", "IGP", "DO", "AVA", "IGT",
-    "Barolo DOCG", "Bordeaux AOC", "Chablis Premier Cru"
-]
+DENOMS = ["DOCG", "DOC", "AOC", "AOP", "DOP", "IGP", "IGT", "DO", "AVA", "WO"]
 
 
-def safe_get_text(url: str):
-    try:
-        resp = requests.get(url, headers=HEADERS, timeout=25)
-        resp.raise_for_status()
-        html = resp.text
-        soup = BeautifulSoup(html, "lxml")
+def _find_first(text, options):
+    txt = (text or "").lower()
+    for op in sorted(options, key=len, reverse=True):
+        if op.lower() in txt:
+            return op
+    return ""
 
-        for tag in soup(["script", "style", "noscript"]):
-            tag.decompose()
 
-        title = soup.title.get_text(" ", strip=True) if soup.title else ""
-        meta_desc = ""
-        meta = soup.find("meta", attrs={"name": "description"})
-        if meta and meta.get("content"):
-            meta_desc = meta["content"].strip()
-
-        paragraphs = []
-        for p in soup.find_all("p"):
-            txt = p.get_text(" ", strip=True)
-            if len(txt) >= 40:
-                paragraphs.append(txt)
-            if len(paragraphs) >= 25:
-                break
-
-        full_text = "\n".join([title, meta_desc] + paragraphs)
-        return full_text[:40000]
-    except Exception:
+def _extract_vintage(text):
+    if not text:
         return ""
+    m = re.search(r"\b(19\d{2}|20\d{2}|21\d{2})\b", text)
+    return m.group(1) if m else ""
 
 
-def first_match(patterns, text):
+def _extract_alcohol(text):
+    if not text:
+        return ""
+    patterns = [
+        r"(\d{1,2}(?:[\.,]\d)?)\s*%",
+        r"(\d{1,2}(?:[\.,]\d)?)\s*%?\s*vol",
+        r"alcohol[:\s]+(\d{1,2}(?:[\.,]\d)?)"
+    ]
     for p in patterns:
-        m = re.search(p, text, flags=re.IGNORECASE)
+        m = re.search(p, text, flags=re.I)
         if m:
-            return m.group(1)
+            return m.group(1).replace(",", ".") + "%"
     return ""
 
 
-def find_keyword_from_list(text, values):
-    low = text.lower()
-    for item in sorted(values, key=len, reverse=True):
-        if item.lower() in low:
-            return item
-    return ""
+def _extract_simple_field(text, keywords):
+    low = (text or "").lower()
+    hits = [k for k in keywords if k.lower() in low]
+    return ", ".join(hits[:3]) if hits else ""
 
 
-def extract_sentence_with_keywords(text, keywords, max_len=300):
-    chunks = re.split(r"(?<=[\.\!\?])\s+", text)
-    low_keywords = [k.lower() for k in keywords]
+def parse_source_result(source: dict):
+    title = source.get("title", "") or ""
+    snippet = source.get("snippet", "") or ""
+    page_text = source.get("page_text", "") or ""
 
-    for ch in chunks:
-        cl = ch.lower()
-        if any(k in cl for k in low_keywords):
-            return ch[:max_len]
-    return ""
+    blob = " ".join([title, snippet, page_text])
 
-
-def parse_source(url: str, title: str = "", snippet: str = ""):
-    text = safe_get_text(url)
-    combined = " ".join([title or "", snippet or "", text or ""]).strip()
-
-    if not combined:
-        return {
-            "source_url": url,
-            "source_title": title,
-            "source_snippet": snippet,
-            "extracted": {}
-        }
-
-    alcohol = first_match(FIELD_PATTERNS["alcohol"], combined)
-    vintage = first_match(FIELD_PATTERNS["vintage"], combined)
-    grape = find_keyword_from_list(combined, GRAPES)
-    country = find_keyword_from_list(combined, COUNTRIES)
-    region = find_keyword_from_list(combined, REGIONS)
-    denomination = find_keyword_from_list(combined, DENOMS)
-
-    aromas = extract_sentence_with_keywords(
-        combined,
-        ["aroma", "aromas", "nose", "bouquet", "frutas", "plum", "cherry", "violet"]
-    )
-    palate = extract_sentence_with_keywords(
-        combined,
-        ["palate", "paladar", "boca", "taninos", "finish", "final", "body", "corpo"]
-    )
-    acidity = extract_sentence_with_keywords(
-        combined,
-        ["acidity", "acidez", "fresh", "fresco"]
-    )
-    soil = extract_sentence_with_keywords(
-        combined,
-        ["soil", "solo", "chalk", "clay", "limestone", "gravel", "argila", "calcário", "marga"]
-    )
-    climate = extract_sentence_with_keywords(
-        combined,
-        ["climate", "clima", "continental", "maritime", "mediterranean", "oceânico"]
-    )
-    terroir = extract_sentence_with_keywords(
-        combined,
-        ["terroir", "vineyard", "vinhedo", "altitude", "encosta", "parcel"]
-    )
-    aging = extract_sentence_with_keywords(
-        combined,
-        ["oak", "barrel", "barrica", "aging", "aged", "maturation", "carvalho"]
-    )
-    pairing = extract_sentence_with_keywords(
-        combined,
-        ["pairing", "harmonization", "harmonização", "serve with", "food pairing"]
-    )
-
-    extracted = {
-        "alcohol": alcohol,
-        "vintage": vintage,
-        "grape": grape,
-        "country": country,
-        "region": region,
-        "denomination": denomination,
-        "aromas": aromas,
-        "palate": palate,
-        "acidity": acidity,
-        "soil": soil,
-        "climate": climate,
-        "terroir": terroir,
-        "aging": aging,
-        "pairing": pairing,
-        "raw_excerpt": combined[:2500]
+    out = {
+        "producer": "",
+        "wine_name": "",
+        "vintage": _extract_vintage(blob),
+        "grape": _extract_simple_field(blob, GRAPES),
+        "country": _find_first(blob, COUNTRIES),
+        "region": _find_first(blob, REGIONS),
+        "subregion": "",
+        "denomination": _find_first(blob, DENOMS),
+        "classification": "",
+        "wine_type": "",
+        "alcohol": _extract_alcohol(blob),
+        "aromas": "",
+        "palate": "",
+        "acidity": "",
+        "body": "",
+        "soil": "",
+        "climate": "",
+        "terroir": "",
+        "aging": "",
+        "pairing": "",
+        "notes": "",
+        "raw_excerpt": blob[:3000]
     }
 
-    return {
-        "source_url": url,
-        "source_title": title,
-        "source_snippet": snippet,
-        "extracted": extracted
-    }
+    low = blob.lower()
+
+    # tipo
+    if "sparkling wine" in low or "champagne" in low or "espumante" in low:
+        out["wine_type"] = "Espumante"
+    elif "white wine" in low or "vinho branco" in low:
+        out["wine_type"] = "Branco"
+    elif "rosé" in low or "rose wine" in low or "vinho rosé" in low:
+        out["wine_type"] = "Rosé"
+    elif "red wine" in low or "vinho tinto" in low:
+        out["wine_type"] = "Tinto"
+
+    # aromas / palate / acidity / body / aging
+    aroma_keys = ["cherry", "blackberry", "plum", "citrus", "apple", "brioche", "vanilla", "oak", "floral", "mineral"]
+    palate_keys = ["smooth", "creamy", "fresh", "fruity", "dry", "balanced", "structured", "elegant", "long finish"]
+    acidity_keys = ["high acidity", "medium acidity", "bright acidity", "fresh acidity"]
+    body_keys = ["light-bodied", "medium-bodied", "full-bodied", "medium body", "full body"]
+
+    found_aromas = [k for k in aroma_keys if k in low]
+    found_palate = [k for k in palate_keys if k in low]
+    found_acidity = [k for k in acidity_keys if k in low]
+    found_body = [k for k in body_keys if k in low]
+
+    if found_aromas:
+        out["aromas"] = ", ".join(found_aromas[:8])
+    if found_palate:
+        out["palate"] = ", ".join(found_palate[:8])
+    if found_acidity:
+        out["acidity"] = ", ".join(found_acidity[:4])
+    if found_body:
+        out["body"] = ", ".join(found_body[:4])
+
+    if "oak" in low or "oaky" in low or "barrel" in low or "aged" in low:
+        out["aging"] = "Há indícios de amadurecimento / notas de carvalho na fonte."
+
+    # heurística simples para produtor/nome do vinho a partir do título
+    cleaned_title = title.replace("–", "-").replace("|", "-")
+    parts = [p.strip() for p in cleaned_title.split("-") if p.strip()]
+    if parts:
+        main = parts[0]
+        out["notes"] = f"Extraído de fonte online: {title}"
+
+        # tenta quebrar produtor + vinho
+        words = main.split()
+        if len(words) >= 2:
+            out["producer"] = " ".join(words[:2])
+            out["wine_name"] = " ".join(words[2:]) if len(words) > 2 else main
+
+    return out
