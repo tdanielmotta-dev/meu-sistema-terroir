@@ -2,64 +2,27 @@ import streamlit as st
 from database import init_db, seed_if_empty
 from report_builder import build_wine_report
 
-st.set_page_config(page_title="WINEINDEX OMEGA V7", page_icon="🍷", layout="wide")
+st.set_page_config(page_title="WINEINDEX OMEGA V8", page_icon="🍷", layout="wide")
 
 
-def render_dict_block(title, data):
-    st.subheader(title)
-    if not data:
-        st.write("Nenhum dado.")
-        return
-    st.json(data)
-
-
-def render_profile(profile: dict, field_sources: dict):
-    st.subheader("🍷 Ficha consolidada do vinho")
-
-    st.markdown(f"**Nome consultado:** {profile.get('query', '')}")
-
-    fields_order = [
-        ("producer", "Produtor"),
-        ("wine_name", "Nome do vinho"),
-        ("vintage", "Safra"),
-        ("grape", "Uva"),
-        ("country", "País"),
-        ("region", "Região"),
-        ("subregion", "Sub-região"),
-        ("denomination", "Denominação"),
-        ("classification", "Classificação"),
-        ("wine_type", "Tipo"),
-        ("alcohol", "Teor alcoólico"),
-        ("aromas", "Aromas"),
-        ("palate", "Paladar"),
-        ("acidity", "Acidez"),
-        ("body", "Corpo"),
-        ("soil", "Solo"),
-        ("climate", "Clima"),
-        ("terroir", "Terroir"),
-        ("aging", "Amadurecimento"),
-        ("pairing", "Harmonização"),
-        ("notes", "Observações"),
-    ]
-
-    for key, label in fields_order:
-        value = str(profile.get(key, "")).strip()
-        if not value:
-            value = "—"
-
-        sources = field_sources.get(key, [])
-        source_text = " | ".join(sources) if sources else "sem fonte atribuída"
-
+def show_field(label, value, sources):
+    if value:
         st.markdown(f"**{label}:** {value}")
-        st.caption(f"Fonte(s): {source_text}")
+    else:
+        st.markdown(f"**{label}:** —")
+
+    if sources:
+        st.caption("Fonte(s): " + " | ".join(sources))
+    else:
+        st.caption("Fonte(s): sem fonte atribuída")
 
 
 def main():
     init_db()
     seed_if_empty()
 
-    st.title("🍷 WINEINDEX OMEGA V7")
-    st.write("**Pesquisa definitiva de rótulos de vinho:** banco local + internet + consolidação automática")
+    st.title("🍷 WINEINDEX OMEGA V8")
+    st.write("**Pesquisa definitiva de rótulos de vinho: banco local + internet + consolidação automática**")
     st.write("""
 Digite somente o nome do rótulo ou o título do vinho, por exemplo:
 
@@ -69,6 +32,7 @@ Digite somente o nome do rótulo ou o título do vinho, por exemplo:
 - Chablis Premier Cru
 
 O sistema tenta levantar:
+
 - produtor
 - safra
 - uva
@@ -81,22 +45,46 @@ O sistema tenta levantar:
 - e outras informações encontradas
 """)
 
-    query = st.text_input("🔎 Digite o rótulo / nome do vinho", value="Gato Negro Malbec 2019")
+    query = st.text_input("🔎 Digite o rótulo / nome do vinho")
 
-    if st.button("Pesquisar"):
-        with st.spinner("Pesquisando banco local, knowledge base e internet..."):
+    if st.button("Pesquisar") and query.strip():
+        with st.spinner("Pesquisando banco local + internet + consolidando ficha..."):
             report = build_wine_report(query)
 
         st.subheader("📌 Resumo consolidado")
         for item in report["summary"]:
             st.write(f"• {item}")
 
-        render_profile(report["profile"], report["field_sources"])
+        card = report["card"]
 
-        st.divider()
-        render_dict_block("🧠 Parser da consulta", report["parser"])
+        st.subheader("🍷 Ficha consolidada do vinho")
+        st.write(f"**Nome consultado:** {report['query']}")
 
-        st.divider()
+        show_field("Produtor", card["producer"], card["_sources"]["producer"])
+        show_field("Nome do vinho", card["wine_name"], card["_sources"]["wine_name"])
+        show_field("Safra", card["vintage"], card["_sources"]["vintage"])
+        show_field("Uva", card["grape"], card["_sources"]["grape"])
+        show_field("País", card["country"], card["_sources"]["country"])
+        show_field("Região", card["region"], card["_sources"]["region"])
+        show_field("Sub-região", card["subregion"], card["_sources"]["subregion"])
+        show_field("Denominação", card["denomination"], card["_sources"]["denomination"])
+        show_field("Classificação", card["classification"], card["_sources"]["classification"])
+        show_field("Tipo", card["wine_type"], card["_sources"]["wine_type"])
+        show_field("Teor alcoólico", card["alcohol"], card["_sources"]["alcohol"])
+        show_field("Aromas", card["aromas"], card["_sources"]["aromas"])
+        show_field("Paladar", card["palate"], card["_sources"]["palate"])
+        show_field("Acidez", card["acidity"], card["_sources"]["acidity"])
+        show_field("Corpo", card["body"], card["_sources"]["body"])
+        show_field("Solo", card["soil"], card["_sources"]["soil"])
+        show_field("Clima", card["climate"], card["_sources"]["climate"])
+        show_field("Terroir", card["terroir"], card["_sources"]["terroir"])
+        show_field("Amadurecimento", card["aging"], card["_sources"]["aging"])
+        show_field("Harmonização", card["pairing"], card["_sources"]["pairing"])
+        show_field("Observações", card["notes"], card["_sources"]["notes"])
+
+        st.subheader("🧠 Parser da consulta")
+        st.json(report["parser"])
+
         st.subheader("🗄️ Resultado do banco local")
         if report["wine_found"]:
             st.write("**Vinho encontrado no banco local:**")
@@ -110,37 +98,31 @@ O sistema tenta levantar:
         else:
             st.write("Nenhuma denominação correspondente encontrada no banco local.")
 
-        st.divider()
         st.subheader("🧠 Knowledge base")
         if report["knowledge_matches"]:
-            for idx, kb in enumerate(report["knowledge_matches"], start=1):
-                st.markdown(f"**Match {idx}**")
-                st.json(kb)
+            for i, item in enumerate(report["knowledge_matches"], start=1):
+                st.write(f"**Match {i}**")
+                st.json(item)
         else:
             st.write("Nenhuma correspondência encontrada na knowledge base.")
 
-        st.divider()
         st.subheader("🌐 Fontes online encontradas")
         if report["online_sources"]:
-            for idx, src in enumerate(report["online_sources"], start=1):
-                st.markdown(f"### Fonte {idx}")
+            for i, src in enumerate(report["online_sources"], start=1):
+                st.write(f"**Fonte {i}**")
                 st.write(f"**Título:** {src.get('title', '')}")
                 st.write(f"**URL:** {src.get('url', '')}")
                 if src.get("snippet"):
-                    st.write(f"**Snippet:** {src.get('snippet')}")
+                    st.write(f"**Snippet:** {src.get('snippet', '')}")
+                if src.get("page_summary"):
+                    st.write("**Resumo bruto da página:**")
+                    st.write(src.get("page_summary"))
+                if src.get("parsed_data"):
+                    st.write("**Extração estruturada:**")
+                    st.json(src.get("parsed_data"))
+                st.markdown("---")
         else:
             st.write("Nenhuma fonte online relevante foi consolidada.")
-
-        st.divider()
-        st.subheader("🧪 Extração por fonte")
-        if report["parsed_sources"]:
-            for idx, ps in enumerate(report["parsed_sources"], start=1):
-                st.markdown(f"### Parser da fonte {idx}")
-                st.write(f"**Título:** {ps.get('source_title', '')}")
-                st.write(f"**URL:** {ps.get('source_url', '')}")
-                st.json(ps.get("extracted", {}))
-        else:
-            st.write("Nenhuma fonte foi parseada.")
 
 
 if __name__ == "__main__":
