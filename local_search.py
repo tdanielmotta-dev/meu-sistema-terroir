@@ -3,7 +3,7 @@ from database import fetch_all_wines, fetch_all_denominations
 
 
 def similarity(a: str, b: str) -> float:
-    return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
+    return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
 
 def search_local_wine(query: str):
@@ -25,7 +25,6 @@ def search_local_wine(query: str):
             str(wine.get("subregion", "")),
             str(wine.get("country", "")),
             str(wine.get("denomination", "")),
-            str(wine.get("classification", "")),
         ])
 
         score = similarity(query, haystack)
