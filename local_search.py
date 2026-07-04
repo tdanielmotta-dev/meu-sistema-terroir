@@ -1,8 +1,10 @@
 from difflib import SequenceMatcher
-from database import fetch_all_wines
+from database import fetch_all_wines, fetch_all_denominations
+
 
 def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
+
 
 def search_local_wine(query: str):
     query = (query or "").strip()
@@ -22,11 +24,9 @@ def search_local_wine(query: str):
             str(wine.get("region", "")),
             str(wine.get("country", "")),
             str(wine.get("denomination", "")),
-            str(wine.get("classification", "")),
         ])
 
         score = similarity(query, haystack)
-
         if query.lower() in haystack.lower():
             score += 0.35
 
@@ -34,8 +34,39 @@ def search_local_wine(query: str):
             best_score = score
             best = dict(wine)
 
-    if best and best_score >= 0.35:
+    if best and best_score >= 0.30:
         best["_score"] = round(best_score, 4)
         return best
+    return None
 
+
+def search_local_denomination(query: str):
+    query = (query or "").strip()
+    if not query:
+        return None
+
+    denoms = fetch_all_denominations()
+    best = None
+    best_score = 0.0
+
+    for d in denoms:
+        haystack = " ".join([
+            str(d.get("country", "")),
+            str(d.get("region", "")),
+            str(d.get("denomination", "")),
+            str(d.get("classification", "")),
+            str(d.get("allowed_grapes", "")),
+        ])
+
+        score = similarity(query, haystack)
+        if query.lower() in haystack.lower():
+            score += 0.35
+
+        if score > best_score:
+            best_score = score
+            best = dict(d)
+
+    if best and best_score >= 0.30:
+        best["_score"] = round(best_score, 4)
+        return best
     return None
