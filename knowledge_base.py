@@ -1,3 +1,5 @@
+from difflib import SequenceMatcher
+
 KNOWLEDGE_BASE = [
     {
         "aliases": ["gato negro malbec", "gato negro malbec 2019"],
@@ -24,31 +26,7 @@ KNOWLEDGE_BASE = [
         "notes": "Entrada de conhecimento-base"
     },
     {
-        "aliases": ["catena malbec"],
-        "producer": "Catena",
-        "wine_name": "Malbec",
-        "vintage": "",
-        "grape": "Malbec",
-        "country": "Argentina",
-        "region": "Mendoza",
-        "subregion": "",
-        "denomination": "",
-        "classification": "",
-        "wine_type": "Tinto",
-        "alcohol": "",
-        "aromas": "violeta, ameixa, frutas negras",
-        "palate": "frutado, estruturado",
-        "acidity": "média",
-        "body": "médio a encorpado",
-        "soil": "aluvial",
-        "climate": "continental seco",
-        "terroir": "altitude andina",
-        "aging": "",
-        "pairing": "",
-        "notes": "Entrada de conhecimento-base"
-    },
-    {
-        "aliases": ["barolo docg 2018", "barolo 2018"],
+        "aliases": ["barolo classico", "barolo docg", "barolo 2018"],
         "producer": "",
         "wine_name": "Barolo",
         "vintage": "2018",
@@ -60,39 +38,47 @@ KNOWLEDGE_BASE = [
         "classification": "DOCG",
         "wine_type": "Tinto",
         "alcohol": "",
-        "aromas": "rosa, cereja, alcatrão",
+        "aromas": "rosa, cereja, alcaçuz, alcatrão",
         "palate": "estruturado, tânico, longo",
         "acidity": "alta",
         "body": "encorpado",
-        "soil": "calcário, marga",
+        "soil": "marga calcária",
         "climate": "continental",
-        "terroir": "Langhe",
-        "aging": "maturação prolongada obrigatória",
-        "pairing": "",
-        "notes": "Entrada de conhecimento-base"
-    },
-    {
-        "aliases": ["chablis premier cru", "chablis"],
-        "producer": "",
-        "wine_name": "Chablis Premier Cru",
-        "vintage": "",
-        "grape": "Chardonnay",
-        "country": "França",
-        "region": "Bourgogne",
-        "subregion": "Chablis",
-        "denomination": "Chablis Premier Cru",
-        "classification": "AOC",
-        "wine_type": "Branco",
-        "alcohol": "",
-        "aromas": "cítricos, maçã verde, mineral",
-        "palate": "seco, tenso, mineral",
-        "acidity": "alta",
-        "body": "médio",
-        "soil": "Kimmeridgian",
-        "climate": "frio continental",
-        "terroir": "encostas calcárias de Chablis",
-        "aging": "",
-        "pairing": "frutos do mar",
+        "terroir": "encostas calcárias",
+        "aging": "maturação longa conforme regra DOCG",
+        "pairing": "carnes, caça, risoto",
         "notes": "Entrada de conhecimento-base"
     }
 ]
+
+
+def _sim(a: str, b: str) -> float:
+    return SequenceMatcher(None, (a or "").lower(), (b or "").lower()).ratio()
+
+
+def search_knowledge_base(query: str):
+    query = (query or "").strip()
+    if not query:
+        return []
+
+    results = []
+    q_lower = query.lower()
+
+    for item in KNOWLEDGE_BASE:
+        aliases = item.get("aliases", [])
+        best = 0.0
+
+        for alias in aliases:
+            score = _sim(q_lower, alias.lower())
+            if alias.lower() in q_lower or q_lower in alias.lower():
+                score += 0.35
+            if score > best:
+                best = score
+
+        if best >= 0.35:
+            row = dict(item)
+            row["_score"] = round(best, 4)
+            results.append(row)
+
+    results.sort(key=lambda x: x.get("_score", 0), reverse=True)
+    return results
