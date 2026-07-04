@@ -1,114 +1,93 @@
-WINE_FIELDS = [
-    "producer",
-    "wine_name",
-    "vintage",
-    "grape",
-    "country",
-    "region",
-    "subregion",
-    "denomination",
-    "classification",
-    "wine_type",
-    "alcohol",
-    "aromas",
-    "palate",
-    "acidity",
-    "body",
-    "soil",
-    "climate",
-    "terroir",
-    "aging",
-    "pairing",
-    "notes",
+FIELDS = [
+    "producer", "wine_name", "vintage", "grape", "country", "region", "subregion",
+    "denomination", "classification", "wine_type", "alcohol", "aromas", "palate",
+    "acidity", "body", "soil", "climate", "terroir", "aging", "pairing", "notes"
 ]
 
-def blank_record():
-    return {field: "" for field in WINE_FIELDS}
 
-def merge_record(target: dict, source: dict, source_name: str, source_priority: int, source_map: dict):
-    if not source:
+def is_filled(v):
+    return v is not None and str(v).strip() != ""
+
+
+def merge_value(final_data, sources_map, field, value, source_name):
+    if not is_filled(value):
         return
 
-    for field in WINE_FIELDS:
-        val = source.get(field, "")
-        if val is None:
-            val = ""
-        val = str(val).strip()
+    if not is_filled(final_data.get(field)):
+        final_data[field] = value
+        sources_map.setdefault(field, []).append(source_name)
+        return
 
-        if not val:
-            continue
+    # se já existe, mas o novo texto é maior / mais rico, substitui
+    old = str(final_data.get(field, "")).strip()
+    new = str(value).strip()
+    if len(new) > len(old):
+        final_data[field] = new
+        sources_map.setdefault(field, []).append(source_name)
 
-        current = (target.get(field) or "").strip()
-        current_priority = source_map.get(field, {}).get("priority", -1)
 
-        if not current or source_priority >= current_priority:
-            target[field] = val
-            source_map[field] = {
-                "source": source_name,
-                "priority": source_priority
-            }
+def consolidate_report(query, parsed_query, local_wine, local_denom, kb_matches, online_sources, parsed_sources):
+    final_data = {f: "" for f in FIELDS}
+    source_map = {"query": ["USER_QUERY"]}
 
-def consolidate(query: str, parsed_query: dict, local_wine: dict, kb_matches: list, parsed_sources: list):
-    result = blank_record()
-    source_map = {}
-
-    # guarda query original
-    result["notes"] = ""
-
-    # 1) parser da query (baixa prioridade)
-    query_record = {}
+    # query parser
     if parsed_query.get("vintage"):
-        query_record["vintage"] = parsed_query["vintage"]
+        merge_value(final_data, source_map, "vintage", parsed_query["vintage"], "QUERY_PARSER")
     if parsed_query.get("grape"):
-        query_record["grape"] = parsed_query["grape"]
+        merge_value(final_data, source_map, "grape", parsed_query["grape"], "QUERY_PARSER")
     if parsed_query.get("country"):
-        query_record["country"] = parsed_query["country"]
+        merge_value(final_data, source_map, "country", parsed_query["country"], "QUERY_PARSER")
     if parsed_query.get("region"):
-        query_record["region"] = parsed_query["region"]
+        merge_value(final_data, source_map, "region", parsed_query["region"], "QUERY_PARSER")
     if parsed_query.get("denomination"):
-        query_record["denomination"] = parsed_query["denomination"]
+        merge_value(final_data, source_map, "denomination", parsed_query["denomination"], "QUERY_PARSER")
 
-    merge_record(result, query_record, "QUERY_PARSER", 10, source_map)
-
-    # 2) banco local
+    # local wine
     if local_wine:
-        merge_record(result, local_wine, "LOCAL_DB_WINE", 40, source_map)
+        for f in FIELDS:
+            merge_value(final_data, source_map, f, local_wine.get(f, ""), "LOCAL_DB_WINE")
 
-    # 3) knowledge base
-    for idx, item in enumerate(kb_matches[:3], start=1):
-        merge_record(result, item, f"KNOWLEDGE_BASE_{idx}", 50, source_map)
+    # local denomination
+    if local_denom:
+        merge_value(final_data, source_map, "country", local_denom.get("country", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "region", local_denom.get("region", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "denomination", local_denom.get("denomination", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "classification", local_denom.get("classification", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "grape", local_denom.get("allowed_grapes", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "alcohol", local_denom.get("min_alcohol", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "aging", local_denom.get("aging_rules", ""), "LOCAL_DB_DENOM")
+        merge_value(final_data, source_map, "notes", local_denom.get("notes", ""), "LOCAL_DB_DENOM")
 
-    # 4) fontes online
-    for item in parsed_sources:
-        source_name = f"WEB:{item.get('_source_title', 'fonte')}"
-        priority = 60
+    # knowledge base
+    for idx, kb in enumerate(kb_matches, start=1):
+        source_name = f"KNOWLEDGE_BASE_{idx}"
+        for f in FIELDS:
+            merge_value(final_data, source_map, f, kb.get(f, ""), source_name)
 
-        parser_name = item.get("_parser")
-        if parser_name == "generic":
-            priority = 55
-        elif parser_name == "wine_searcher":
-            priority = 58
-        elif parser_name == "vivino":
-            priority = 57
+    # online parsed
+    for idx, parsed in enumerate(parsed_sources, start=1):
+        source_name = f"WEB_SOURCE_{idx}"
+        for f in FIELDS:
+            merge_value(final_data, source_map, f, parsed.get(f, ""), source_name)
 
-        merge_record(result, item, source_name, priority, source_map)
+    # fallback: nome consultado
+    if not final_data.get("wine_name"):
+        final_data["wine_name"] = query
 
-    # fallback: se não preencheu nome do vinho, usa query
-    if not result.get("wine_name"):
-        result["wine_name"] = query
+    filled = sum(1 for f in FIELDS if is_filled(final_data.get(f)))
+    total_sources = sum(len(v) for v in source_map.values())
 
-    return result, source_map
-
-def count_filled_fields(record: dict):
-    total = 21
-    filled = 0
-    for k, v in record.items():
-        if k not in [
-            "producer","wine_name","vintage","grape","country","region","subregion",
-            "denomination","classification","wine_type","alcohol","aromas","palate",
-            "acidity","body","soil","climate","terroir","aging","pairing","notes"
-        ]:
-            continue
-        if str(v or "").strip():
-            filled += 1
-    return filled, total
+    return {
+        "query": query,
+        "final_data": final_data,
+        "source_map": source_map,
+        "filled_fields": filled,
+        "total_fields": len(FIELDS),
+        "total_source_attributions": total_sources,
+        "local_wine": local_wine,
+        "local_denomination": local_denom,
+        "knowledge_matches": kb_matches,
+        "online_sources": online_sources,
+        "parsed_online_sources": parsed_sources,
+        "parsed_query": parsed_query
+            }
